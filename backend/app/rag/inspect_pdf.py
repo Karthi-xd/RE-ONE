@@ -1,10 +1,18 @@
-import fitz
+from pathlib import Path
+import pymupdf
 
-PDF_PATH = "../../data/2015.pdf"
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+PDF_PATH = PROJECT_ROOT / "data" / "2015.pdf"
 
-document = fitz.open(PDF_PATH)
+print("Looking for PDF at:")
+print(PDF_PATH)
 
-print("Number of pages:", len(document))
+if not PDF_PATH.exists():
+    raise FileNotFoundError(f"PDF not found: {PDF_PATH}")
+
+document = pymupdf.open(PDF_PATH)
+
+print(f"\nNumber of pages: {len(document)}")
 
 for page_number, page in enumerate(document):
     text = page.get_text()
