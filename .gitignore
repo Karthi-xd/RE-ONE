@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Environment
+.env
+.env.local
+
+# Node
+node_modules/
+dist/
+build/
+
+# Data / knowledge documents
+data/
+*.pdf
+
+# ChromaDB
+chroma/
+chromadb/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
