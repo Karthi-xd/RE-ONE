@@ -1,6 +1,6 @@
 from pathlib import Path
-import re
 import json
+import re
 import pymupdf
 
 
@@ -16,25 +16,20 @@ OUTPUT_PATH = OUTPUT_DIR / "2015_events.json"
 
 
 # --------------------------------------------------
-# EXTRACT TEXT FROM PDF
+# PDF TEXT EXTRACTION
 # --------------------------------------------------
 
 def extract_pdf_text(pdf_path):
     document = pymupdf.open(pdf_path)
 
-    pages = []
+    text = ""
 
-    for page_number, page in enumerate(document, start=1):
-        text = page.get_text("text")
-
-        pages.append({
-            "page": page_number,
-            "text": text
-        })
+    for page in document:
+        text += page.get_text("text") + "\n"
 
     document.close()
 
-    return pages
+    return text
 
 
 # --------------------------------------------------
@@ -42,14 +37,14 @@ def extract_pdf_text(pdf_path):
 # --------------------------------------------------
 
 def clean_text(text):
-    # Remove page markers such as --- PAGE 64 ---
+    # Remove page markers
     text = re.sub(r"--- PAGE \d+ ---", "", text)
 
     # Remove continuation markers
     text = re.sub(r"\[PART \d+ - CONTINUATION\]", "", text)
 
-    # Join lines that were broken by PDF formatting
-    text = re.sub(r"\s*\n\s*", "\n", text)
+    # Fix common PDF line wrapping
+    text = re.sub(r"[ \t]+\n", "\n", text)
 
     # Remove excessive blank lines
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -58,45 +53,62 @@ def clean_text(text):
 
 
 # --------------------------------------------------
-# SPLIT PDF INTO EVENT BLOCKS
+# FIND EVENT BLOCKS
 # --------------------------------------------------
 
-def split_into_events(text):
-    """
-    Each event normally begins with a title and is followed by
-    Date:, Category:, What happened:, Why it mattered:, Source:, etc.
-
-    We split whenever a new Date: field appears.
-    """
-
-    # Split before Date: while keeping the previous title
-    blocks = re.split(r"\n(?=Date:\s*)", text)
+def extract_event_blocks(text):
+    lines = text.splitlines()
 
     events = []
 
-    for block in blocks:
-        block = block.strip()
+    current_title = None
+    current_lines = []
+    last_line = None
 
-        if not block:
+    for line in lines:
+
+        line = line.strip()
+
+        if not line:
             continue
 
-        # We need at least Date + Category to consider this an event
-        if "Date:" not in block or "Category:" not in block:
-            continue
+        if line.startswith("Date:"):
+            # The line right before "Date:" is the title
+            current_title = last_line
+            current_lines = [line]
 
-        events.append(block)
+        else:
+            if current_title is not None:
+                current_lines.append(line)
+
+        if line.startswith("Source:"):
+
+            event_text = "\n".join(current_lines)
+
+            if current_title:
+                events.append({
+                    "title": current_title,
+                    "text": event_text
+                })
+
+            current_title = None
+            current_lines = []
+
+        last_line = line
 
     return events
-
-
 # --------------------------------------------------
-# EXTRACT FIELD
+# FIELD EXTRACTION
 # --------------------------------------------------
 
-def extract_field(block, field_name):
-    pattern = rf"{re.escape(field_name)}:\s*(.*?)(?=\n[A-Z][A-Za-z /&()'-]+:|$)"
+def extract_field(text, field_name, next_fields):
+    """
+    Extract text between one field and the next field.
+    """
 
-    match = re.search(pattern, block, re.DOTALL)
+    pattern = rf"{re.escape(field_name)}:\s*(.*?)(?=\n(?:{'|'.join(re.escape(field) + ':' for field in next_fields)})|\Z)"
+
+    match = re.search(pattern, text, re.DOTALL)
 
     if match:
         return match.group(1).strip()
@@ -105,37 +117,154 @@ def extract_field(block, field_name):
 
 
 # --------------------------------------------------
-# CREATE STRUCTURED EVENT
+# PARSE EVENT
 # --------------------------------------------------
 
-def parse_event(block):
-    lines = block.splitlines()
+def parse_event(event):
+    text = event["text"]
 
-    # Everything before Date: is treated as the title
-    title = ""
-
-    for line in lines:
-        if line.startswith("Date:"):
-            break
-
-        if line.strip():
-            title = line.strip()
-
-    event = {
-        "title": title,
-        "date": extract_field(block, "Date"),
-        "category": extract_field(block, "Category"),
-        "location": extract_field(block, "Location"),
-        "people_organizations": extract_field(block, "People/Organizations"),
-        "company": extract_field(block, "Company"),
-        "what_happened": extract_field(block, "What happened"),
-        "why_it_mattered": extract_field(block, "Why it mattered in 2015"),
-        "source": extract_field(block, "Source"),
-        "year": 2015,
-        "raw_text": block
+    parsed = {
+        "title": event["title"],
+        "date": extract_field(
+            text,
+            "Date",
+            [
+                "Category",
+                "Location",
+                "People/Organizations",
+                "Company",
+                "Product",
+                "Mission",
+                "Objective",
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "category": extract_field(
+            text,
+            "Category",
+            [
+                "Location",
+                "People/Organizations",
+                "Company",
+                "Product",
+                "Mission",
+                "Objective",
+                "Result",
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "location": extract_field(
+            text,
+            "Location",
+            [
+                "People/Organizations",
+                "Company",
+                "Product",
+                "Mission",
+                "Objective",
+                "Result",
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "people_organizations": extract_field(
+            text,
+            "People/Organizations",
+            [
+                "Company",
+                "Product",
+                "Mission",
+                "Objective",
+                "Result",
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "company": extract_field(
+            text,
+            "Company",
+            [
+                "Product",
+                "Mission",
+                "Objective",
+                "Result",
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "product": extract_field(
+            text,
+            "Product",
+            [
+                "Mission",
+                "Objective",
+                "Result",
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "mission": extract_field(
+            text,
+            "Mission",
+            [
+                "Objective",
+                "Result",
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "objective": extract_field(
+            text,
+            "Objective",
+            [
+                "Result",
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "result": extract_field(
+            text,
+            "Result",
+            [
+                "What happened",
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "what_happened": extract_field(
+            text,
+            "What happened",
+            [
+                "Why it mattered in 2015",
+                "Source"
+            ]
+        ),
+        "why_it_mattered": extract_field(
+            text,
+            "Why it mattered in 2015",
+            [
+                "Source"
+            ]
+        ),
+        "source": extract_field(
+            text,
+            "Source",
+            []
+        ),
+        "year": 2015
     }
 
-    return event
+    return parsed
 
 
 # --------------------------------------------------
@@ -146,42 +275,35 @@ def main():
 
     if not PDF_PATH.exists():
         raise FileNotFoundError(
-            f"2015 PDF not found at:\n{PDF_PATH}"
+            f"\n2015 PDF not found:\n{PDF_PATH}"
         )
 
-    print(f"Reading PDF:")
+    print("Reading PDF:")
     print(PDF_PATH)
 
-    pages = extract_pdf_text(PDF_PATH)
+    raw_text = extract_pdf_text(PDF_PATH)
 
-    print(f"Pages extracted: {len(pages)}")
+    print(f"Characters extracted: {len(raw_text):,}")
 
-    # Combine all pages
-    full_text = "\n".join(
-        page["text"] for page in pages
-    )
-
-    full_text = clean_text(full_text)
-
+    cleaned_text = clean_text(raw_text)
     print("Text cleaned.")
 
-    # Split into events
-    blocks = split_into_events(full_text)
+    raw_events = extract_event_blocks(cleaned_text)
 
-    print(f"Possible event blocks found: {len(blocks)}")
+    print(f"Event blocks found: {len(raw_events)}")
 
-    # Convert blocks into structured events
     events = []
 
-    for block in blocks:
-        event = parse_event(block)
+    for event in raw_events:
+        parsed = parse_event(event)
 
-        if event["title"]:
-            events.append(event)
+        # Only keep records with a title and date.
+        if parsed["title"] and parsed["date"]:
+            events.append(parsed)
 
-    print(f"Events parsed: {len(events)}")
+    print(f"Valid events parsed: {len(events)}")
 
-    # Create output directory
+    # Create processed directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Save JSON
@@ -200,7 +322,7 @@ def main():
 
     print()
     print("SUCCESS")
-    print(f"Output saved to:")
+    print("Processed data saved to:")
     print(OUTPUT_PATH)
 
 
