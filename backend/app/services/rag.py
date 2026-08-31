@@ -1,7 +1,6 @@
 import chromadb
 import ollama
-from pathlib import Path
-from app.core.config import settings
+from ..core.config import settings
 
 
 def _get_collection(year: int):
@@ -13,7 +12,7 @@ def get_grade(year: int) -> int:
     return 5 + (year - 2015)
 
 
-def retrieve(year: int, query: str, n_results: int = None):
+def retrieve(year: int, query: str, n_results: int | None = None):
     n = n_results or settings.n_results
     collection = _get_collection(year)
     results = collection.query(query_texts=[query], n_results=n)
@@ -45,7 +44,7 @@ Question: {query}
 Answer as CGK, right now in {year}:"""
 
 
-def generate_answer(year: int, query: str) -> tuple[str, list[dict]]:
+def generate_answer(year: int, query: str) -> tuple[str, list[dict[str, str]]]:
     documents, metadatas = retrieve(year, query)
     prompt = build_prompt(year, query, documents)
 

@@ -1,0 +1,6 @@
+{
+  "pythonPath": "C:/Users/dhili/OneDrive/Desktop/RE-ONE/backend/.venv/Scripts/python.exe",
+  "pythonVersion": "3.12",
+  "include": ["app"],
+  "reportMissingModuleSource": "none"
+}

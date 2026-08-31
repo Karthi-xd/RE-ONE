@@ -1,5 +1,8 @@
+import sys
 from pathlib import Path
 import chromadb
+
+YEAR = sys.argv[1] if len(sys.argv) > 1 else "2015"
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 DB_PATH = BASE_DIR / "data" / "chroma_db"
@@ -7,9 +10,9 @@ DB_PATH = BASE_DIR / "data" / "chroma_db"
 
 def main():
     client = chromadb.PersistentClient(path=str(DB_PATH))
-    collection = client.get_or_create_collection(name="events_2015")
+    collection = client.get_or_create_collection(name=f"events_{YEAR}")
 
-    query = input("Ask something about 2015: ")
+    query = input(f"Ask something about {YEAR}: ")
 
     results = collection.query(
         query_texts=[query],

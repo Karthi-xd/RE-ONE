@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from app.models.chat import ChatRequest, ChatResponse, Source
-from app.services.rag import generate_answer
-from app.core.config import settings
+from ..core.config import settings
+from ..models.chat import ChatRequest, ChatResponse, Source
+from ..services.rag import generate_answer
 
 router = APIRouter()
 
@@ -26,8 +26,8 @@ def chat(req: ChatRequest):
 
     try:
         answer, metadatas = generate_answer(req.year, req.question)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"RAG pipeline error: {str(e)}")
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=f"RAG pipeline error: {e!s}")
 
     sources = [
         Source(

@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import List
 
 
 class ChatRequest(BaseModel):
@@ -18,4 +17,4 @@ class ChatResponse(BaseModel):
     year: int
     question: str
     answer: str
-    sources: List[Source]
+    sources: list[Source]
