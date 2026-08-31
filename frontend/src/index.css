@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --amber:       #f5a623;
+  --amber-dim:   #a86c10;
+  --amber-glow:  #ffcc70;
+  --teal:        #00c8c8;
+  --teal-dim:    #007a7a;
+  --teal-glow:   #80ffff;
+  --deep-black:  #080808;
+  --fog:         #1a1208;
+  --panel:       rgba(15, 10, 3, 0.85);
+  --text-main:   #e8d5a3;
+  --text-dim:    #7a6a4a;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  background-color: var(--deep-black);
+  color: var(--text-main);
+  font-family: 'Rajdhani', sans-serif;
+  overflow: hidden;
+}
