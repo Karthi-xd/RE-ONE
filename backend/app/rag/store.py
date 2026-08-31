@@ -1,9 +1,12 @@
+import sys
 import json
 from pathlib import Path
 import chromadb
 
+YEAR = sys.argv[1]
+
 BASE_DIR = Path(__file__).resolve().parents[3]
-CHUNKS_PATH = BASE_DIR / "data" / "processed" / "2015_chunks.json"
+CHUNKS_PATH = BASE_DIR / "data" / "processed" / f"{YEAR}_chunks.json"
 DB_PATH = BASE_DIR / "data" / "chroma_db"
 
 
@@ -12,21 +15,15 @@ def main():
         chunks = json.load(f)
 
     client = chromadb.PersistentClient(path=str(DB_PATH))
-
-    collection = client.get_or_create_collection(name="events_2015")
-
-    ids = [chunk["id"] for chunk in chunks]
-    documents = [chunk["text"] for chunk in chunks]
-    metadatas = [chunk["metadata"] for chunk in chunks]
+    collection = client.get_or_create_collection(name=f"events_{YEAR}")
 
     collection.add(
-        ids=ids,
-        documents=documents,
-        metadatas=metadatas
+        ids=[c["id"] for c in chunks],
+        documents=[c["text"] for c in chunks],
+        metadatas=[c["metadata"] for c in chunks]
     )
 
-    print(f"Stored {len(chunks)} chunks in ChromaDB.")
-    print(f"Database saved at: {DB_PATH}")
+    print(f"Stored {len(chunks)} chunks in collection events_{YEAR}")
 
 
 if __name__ == "__main__":
