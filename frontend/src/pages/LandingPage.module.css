@@ -62,3 +62,28 @@
   45%      { opacity: 0.6; }
   70%      { opacity: 0.35; }
 }
+
+/* Warm glow that eases toward the cursor, like a lamp reacting to the
+   viewer's presence. Opacity is driven from JS so it can fade with idle time. */
+.lampGlow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 640px;
+  height: 640px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 196, 120, 0.5), rgba(255, 196, 120, 0) 68%);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* Subtle vignette that breathes in sync with the background's slow zoom,
+   deepening the sense of depth and life in the scene. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 46%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
+}
