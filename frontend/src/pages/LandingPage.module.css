@@ -1,4 +1,4 @@
-.root {
+.viewport {
   position: relative;
   width: 100%;
   height: 100vh;
@@ -6,12 +6,59 @@
   background: #000;
 }
 
-.scene {
+.imgWrap {
   position: absolute;
-  inset: 0;
+  top: -6%;
+  left: -6%;
+  width: 112%;
+  height: 112%;
+  will-change: transform;
+}
+
+.scene {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: 50% 46%;
   display: block;
+}
+
+.dustCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+/* Soft ambient light shift over the window area — simulates
+   moving sunlight / curtain sway, two overlapping irregular cycles */
+.lightFlicker {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+}
+
+.flickerA {
+  background: radial-gradient(ellipse 50% 42% at 16% 20%, rgba(255, 244, 214, 0.4), transparent 62%);
+  animation: flickerA 9s ease-in-out infinite;
+}
+
+.flickerB {
+  background: radial-gradient(ellipse 40% 36% at 24% 14%, rgba(255, 230, 190, 0.3), transparent 60%);
+  animation: flickerB 14s ease-in-out infinite;
+}
+
+@keyframes flickerA {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.85; }
+}
+
+@keyframes flickerB {
+  0%, 100% { opacity: 0.25; }
+  45%      { opacity: 0.6; }
+  70%      { opacity: 0.35; }
 }
