@@ -1,4 +1,4 @@
-import deskScene from '../assets/desk-scene.png'
+import deskScene from '../assets/desk-scene-extended.png'
 import styles from './LandingPage.module.css'
 
 export default function LandingPage() {
