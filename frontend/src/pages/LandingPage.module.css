@@ -114,12 +114,12 @@
 .tagline {
   position: absolute;
   left: 50%;
-  bottom: 20%;
+  top: 12%;
   transform: translateX(-50%);
   margin: 0;
   font-family: 'Caveat', 'Playfair Display', cursive;
   font-weight: 500;
-  font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+  font-size: clamp(1.3rem, 2.2vw, 1.9rem);
   letter-spacing: 0.01em;
   color: rgba(244, 231, 202, 0.75);
   text-shadow: 0 0 12px rgba(255, 195, 120, 0.25), 0 1px 3px rgba(0, 0, 0, 0.5);
@@ -129,7 +129,7 @@
 }
 
 @keyframes taglineFadeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
