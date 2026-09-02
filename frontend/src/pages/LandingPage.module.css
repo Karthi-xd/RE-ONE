@@ -87,3 +87,68 @@
   pointer-events: none;
   background: radial-gradient(ellipse at 50% 46%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
 }
+
+/* Entry prompt, styled like a faded ink caption rather than an app
+   button, so it reads as part of the scene instead of UI chrome. The
+   handwritten face echoes the diary's own cursive notes. */
+.enterButton {
+  position: absolute;
+  left: 50%;
+  bottom: 13%;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  padding: 0.5em 0.3em;
+  cursor: pointer;
+  font-family: 'Caveat', 'Playfair Display', cursive;
+  font-weight: 600;
+  font-size: clamp(1.6rem, 2.6vw, 2.15rem);
+  letter-spacing: 0.02em;
+  color: rgba(244, 231, 202, 0.85);
+  text-shadow: 0 0 14px rgba(255, 195, 120, 0.35), 0 1px 3px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  animation: enterFadeIn 1.6s ease-out 2s forwards;
+  transition: color 0.4s ease, text-shadow 0.4s ease, letter-spacing 0.4s ease;
+}
+
+.enterButton::after {
+  content: '';
+  display: block;
+  height: 1px;
+  width: 0%;
+  margin: 0.15em auto 0;
+  background: linear-gradient(90deg, transparent, rgba(244, 231, 202, 0.85), transparent);
+  transition: width 0.5s ease;
+}
+
+.enterButton:hover,
+.enterButton:focus-visible {
+  color: rgba(255, 241, 214, 1);
+  text-shadow: 0 0 20px rgba(255, 200, 130, 0.55), 0 1px 3px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.05em;
+  outline: none;
+}
+
+.enterButton:hover::after,
+.enterButton:focus-visible::after {
+  width: 80%;
+}
+
+.enterButton:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+.enterLabel {
+  display: inline-block;
+  animation: enterFloat 4.5s ease-in-out 3.6s infinite;
+}
+
+@keyframes enterFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes enterFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}

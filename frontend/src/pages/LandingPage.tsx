@@ -50,7 +50,8 @@ export default function LandingPage() {
     function onMouseLeave() { hasMouse = false }
     window.addEventListener('mouseleave', onMouseLeave)
 
-    // ── Dust motes — sparse, confined to the window light region (upper-left) ──
+    // ── Dust motes — visible but soft, denser near the window light,
+    //    with a faint but real presence across the rest of the room ──
     interface Dust {
       x: number; y: number
       vx: number; vy: number
@@ -60,13 +61,11 @@ export default function LandingPage() {
       phase: number
     }
 
-    // Dust is brightest near the window (its light source) and fades to a
-    // faint, barely-there presence across the rest of the room.
     function windowLightFactor(x: number, y: number): number {
       const dx = (x - W * 0.16) / W
       const dy = (y - H * 0.20) / H
       const dist = Math.sqrt(dx * dx + dy * dy)
-      return Math.max(0.22, 1 - dist * 1.05)
+      return Math.max(0.38, 1 - dist * 1.0)
     }
 
     function spawnDust(): Dust {
@@ -75,17 +74,17 @@ export default function LandingPage() {
       return {
         x,
         y,
-        vx: (Math.random() - 0.3) * 0.10,
-        vy: -0.05 - Math.random() * 0.10,
-        size: 0.6 + Math.random() * 1.3,
+        vx: (Math.random() - 0.3) * 0.11,
+        vy: -0.06 - Math.random() * 0.11,
+        size: 0.9 + Math.random() * 1.9,
         life: Math.random() * 600,
         maxLife: 500 + Math.random() * 500,
-        baseAlpha: (0.22 + Math.random() * 0.3) * windowLightFactor(x, y),
+        baseAlpha: (0.34 + Math.random() * 0.4) * windowLightFactor(x, y),
         phase: Math.random() * Math.PI * 2,
       }
     }
 
-    const dust: Dust[] = Array.from({ length: 34 }, spawnDust)
+    const dust: Dust[] = Array.from({ length: 46 }, spawnDust)
 
     // ── Coffee steam — rises from the mug and dissipates ──
     interface Steam {
@@ -97,7 +96,6 @@ export default function LandingPage() {
       phase: number
     }
 
-    // Mug sits roughly at 70-81% width, 22-46% height of the scene image.
     function spawnSteam(): Steam {
       return {
         x: W * (0.752 + (Math.random() - 0.5) * 0.03),
@@ -121,7 +119,6 @@ export default function LandingPage() {
     function tick() {
       t += 1
 
-      // Smooth parallax + slow independent drift ("Ken Burns" breathing)
       curMX += (targetMX - curMX) * 0.04
       curMY += (targetMY - curMY) * 0.04
 
@@ -130,8 +127,6 @@ export default function LandingPage() {
       const breathe = Math.sin(t * 0.0009)
       const scale   = 1 + 0.012 * (1 + breathe)
 
-      // Tiny organic camera jitter, layered on top of the smooth drift so the
-      // motion reads as "handheld" rather than perfectly mechanical.
       const jitterX = Math.sin(t * 0.021) * 0.3 + Math.sin(t * 0.0073 + 1.3) * 0.2
       const jitterY = Math.cos(t * 0.017) * 0.25 + Math.sin(t * 0.0091 + 0.7) * 0.15
 
@@ -141,16 +136,11 @@ export default function LandingPage() {
       imgWrap.style.transform =
         `translate3d(calc(${driftX}% + ${parX}px), calc(${driftY}% + ${parY}px), 0) scale(${scale})`
 
-      // Dust canvas — moves slightly more than background for depth
       canvas.style.transform =
         `translate3d(${curMX * 26}px, ${curMY * 18}px, 0)`
 
-      // Breathing vignette, synced to the same slow cycle as the zoom
       vignette.style.opacity = String(0.45 + 0.18 * breathe)
 
-      // Cursor-reactive warm lamp glow — eases toward the pointer and fades
-      // out when the mouse has been idle for a while, so it feels alive
-      // rather than a static decal.
       curPX += (targetPX - curPX) * 0.08
       curPY += (targetPY - curPY) * 0.08
       const idleMs = performance.now() - lastMoveAt
@@ -169,20 +159,30 @@ export default function LandingPage() {
         const lt = p.life / p.maxLife
         const fadeIn  = Math.min(lt / 0.15, 1)
         const fadeOut = Math.min((1 - lt) / 0.15, 1)
-        const alpha = fadeIn * fadeOut * p.baseAlpha
+        const twinkle = 0.8 + 0.2 * Math.sin(p.life * 0.05 + p.phase)
+        const alpha = fadeIn * fadeOut * p.baseAlpha * twinkle
 
-        p.x += p.vx + Math.sin(p.life * 0.02 + p.phase) * 0.05
+        p.x += p.vx + Math.sin(p.life * 0.02 + p.phase) * 0.06
         p.y += p.vy
 
         if (alpha < 0.01) continue
 
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4)
-        grad.addColorStop(0, `rgba(255, 240, 205, ${alpha})`)
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4.2)
+        grad.addColorStop(0, `rgba(255, 244, 214, ${alpha})`)
+        grad.addColorStop(0.4, `rgba(255, 240, 205, ${alpha * 0.5})`)
         grad.addColorStop(1, 'rgba(255, 240, 205, 0)')
         ctx.beginPath()
-        ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2)
+        ctx.arc(p.x, p.y, p.size * 4.2, 0, Math.PI * 2)
         ctx.fillStyle = grad
         ctx.fill()
+
+        // tiny bright core so nearer motes read as a distinct point of light
+        if (p.size > 1.6) {
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(255, 250, 235, ${alpha * 0.9})`
+          ctx.fill()
+        }
       }
 
       for (const p of steam) {
@@ -221,6 +221,10 @@ export default function LandingPage() {
     }
   }, [])
 
+  function handleEnter() {
+    console.log('Enter clicked — main page not implemented yet')
+  }
+
   return (
     <div className={styles.viewport}>
       <div ref={imgWrapRef} className={styles.imgWrap}>
@@ -229,6 +233,7 @@ export default function LandingPage() {
           alt="A leather diary labeled 2015-2020 resting on a wooden desk"
           className={styles.scene}
         />
+        <div className={styles.gleam} />
       </div>
 
       <canvas ref={canvasRef} className={styles.dustCanvas} />
@@ -238,6 +243,16 @@ export default function LandingPage() {
 
       <div ref={lampRef} className={styles.lampGlow} />
       <div ref={vignetteRef} className={styles.vignette} />
+
+      <p className={styles.tagline}>Step back into the years you remember.</p>
+
+      <button
+        type="button"
+        className={styles.enterButton}
+        onClick={handleEnter}
+      >
+        <span className={styles.enterLabel}>Open the Diary</span>
+      </button>
     </div>
   )
 }
