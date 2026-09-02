@@ -27,7 +27,6 @@ export default function LandingPage() {
     resize()
     window.addEventListener('resize', resize)
 
-    // ── Mouse parallax + cursor lamp tracking ──
     let targetMX = 0, targetMY = 0
     let curMX = 0, curMY = 0
 
@@ -50,8 +49,6 @@ export default function LandingPage() {
     function onMouseLeave() { hasMouse = false }
     window.addEventListener('mouseleave', onMouseLeave)
 
-    // ── Dust motes — visible but soft, denser near the window light,
-    //    with a faint but real presence across the rest of the room ──
     interface Dust {
       x: number; y: number
       vx: number; vy: number
@@ -86,7 +83,6 @@ export default function LandingPage() {
 
     const dust: Dust[] = Array.from({ length: 46 }, spawnDust)
 
-    // ── Coffee steam — rises from the mug and dissipates ──
     interface Steam {
       x: number; y: number
       vx: number; vy: number
@@ -112,7 +108,6 @@ export default function LandingPage() {
 
     const steam: Steam[] = Array.from({ length: 7 }, spawnSteam)
 
-    // ── Animation loop ──
     let raf = 0
     let t = 0
 
@@ -149,7 +144,6 @@ export default function LandingPage() {
       lamp.style.opacity = String(curLampOpacity)
       lamp.style.transform = `translate3d(${curPX}px, ${curPY}px, 0) translate(-50%, -50%)`
 
-      // ── Draw dust + steam ──
       ctx.clearRect(0, 0, W, H)
 
       for (const p of dust) {
@@ -176,7 +170,6 @@ export default function LandingPage() {
         ctx.fillStyle = grad
         ctx.fill()
 
-        // tiny bright core so nearer motes read as a distinct point of light
         if (p.size > 1.6) {
           ctx.beginPath()
           ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2)
@@ -234,6 +227,7 @@ export default function LandingPage() {
           className={styles.scene}
         />
         <div className={styles.gleam} />
+        <div className={styles.titleGleam} />
       </div>
 
       <canvas ref={canvasRef} className={styles.dustCanvas} />
@@ -243,6 +237,7 @@ export default function LandingPage() {
 
       <div ref={lampRef} className={styles.lampGlow} />
       <div ref={vignetteRef} className={styles.vignette} />
+      <div className={styles.cornerMask} />
 
       <p className={styles.tagline}>Step back into the years you remember.</p>
 

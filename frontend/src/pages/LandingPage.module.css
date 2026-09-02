@@ -23,9 +23,6 @@
   display: block;
 }
 
-/* Slow diagonal light gleam that sweeps across the leather cover,
-   like sunlight shifting through a window over time. Adds life to
-   the diary itself, not just the surrounding scene. */
 .gleam {
   position: absolute;
   inset: 0;
@@ -48,6 +45,25 @@
   0%   { background-position: 120% 50%; }
   45%  { background-position: -20% 50%; }
   100% { background-position: -20% 50%; }
+}
+
+.titleGleam {
+  position: absolute;
+  left: 47%;
+  top: 34%;
+  width: 220px;
+  height: 60px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 221, 150, 0.35), transparent 70%);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  animation: titlePulse 5s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.75; }
 }
 
 .dustCanvas {
@@ -109,28 +125,47 @@
   background: radial-gradient(ellipse at 50% 46%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
 }
 
-/* Tagline — appears quietly above the entry prompt, like a caption
-   settling into place before the invitation to enter. */
+.cornerMask {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 240px;
+  height: 140px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 100% 100%,
+    rgba(10, 8, 6, 0.85) 0%,
+    rgba(10, 8, 6, 0.55) 35%,
+    rgba(10, 8, 6, 0) 75%
+  );
+}
+
 .tagline {
   position: absolute;
   left: 50%;
-  top: 12%;
+  top: 24%;
   transform: translateX(-50%);
   margin: 0;
+  z-index: 3;
   font-family: 'Caveat', 'Playfair Display', cursive;
   font-weight: 500;
-  font-size: clamp(1.3rem, 2.2vw, 1.9rem);
+  font-size: clamp(1.5rem, 2.6vw, 2.2rem);
   letter-spacing: 0.01em;
-  color: rgba(244, 231, 202, 0.75);
-  text-shadow: 0 0 12px rgba(255, 195, 120, 0.25), 0 1px 3px rgba(0, 0, 0, 0.5);
+  color: rgba(244, 231, 202, 0.85);
+  text-shadow: 0 0 14px rgba(255, 195, 120, 0.35), 0 2px 5px rgba(0, 0, 0, 0.6);
   opacity: 0;
-  animation: taglineFadeIn 2s ease-out 0.8s forwards;
+  animation: taglineFadeIn 2s ease-out 0.8s forwards, taglineDrift 7s ease-in-out 2.8s infinite;
   pointer-events: none;
 }
 
 @keyframes taglineFadeIn {
   from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes taglineDrift {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(-3px); }
 }
 
 .enterButton {
