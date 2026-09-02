@@ -23,6 +23,33 @@
   display: block;
 }
 
+/* Slow diagonal light gleam that sweeps across the leather cover,
+   like sunlight shifting through a window over time. Adds life to
+   the diary itself, not just the surrounding scene. */
+.gleam {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 244, 214, 0.10) 45%,
+    rgba(255, 244, 214, 0.16) 50%,
+    rgba(255, 244, 214, 0.10) 55%,
+    transparent 70%
+  );
+  background-size: 300% 300%;
+  background-position: 0% 50%;
+  mix-blend-mode: soft-light;
+  animation: gleamSweep 16s ease-in-out infinite;
+}
+
+@keyframes gleamSweep {
+  0%   { background-position: 120% 50%; }
+  45%  { background-position: -20% 50%; }
+  100% { background-position: -20% 50%; }
+}
+
 .dustCanvas {
   position: absolute;
   inset: 0;
@@ -33,8 +60,6 @@
   will-change: transform;
 }
 
-/* Soft ambient light shift over the window area — simulates
-   moving sunlight / curtain sway, two overlapping irregular cycles */
 .lightFlicker {
   position: absolute;
   inset: 0;
@@ -63,8 +88,6 @@
   70%      { opacity: 0.35; }
 }
 
-/* Warm glow that eases toward the cursor, like a lamp reacting to the
-   viewer's presence. Opacity is driven from JS so it can fade with idle time. */
 .lampGlow {
   position: absolute;
   top: 0;
@@ -79,8 +102,6 @@
   will-change: transform, opacity;
 }
 
-/* Subtle vignette that breathes in sync with the background's slow zoom,
-   deepening the sense of depth and life in the scene. */
 .vignette {
   position: absolute;
   inset: 0;
@@ -88,9 +109,30 @@
   background: radial-gradient(ellipse at 50% 46%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
 }
 
-/* Entry prompt, styled like a faded ink caption rather than an app
-   button, so it reads as part of the scene instead of UI chrome. The
-   handwritten face echoes the diary's own cursive notes. */
+/* Tagline — appears quietly above the entry prompt, like a caption
+   settling into place before the invitation to enter. */
+.tagline {
+  position: absolute;
+  left: 50%;
+  bottom: 20%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-family: 'Caveat', 'Playfair Display', cursive;
+  font-weight: 500;
+  font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+  letter-spacing: 0.01em;
+  color: rgba(244, 231, 202, 0.75);
+  text-shadow: 0 0 12px rgba(255, 195, 120, 0.25), 0 1px 3px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  animation: taglineFadeIn 2s ease-out 0.8s forwards;
+  pointer-events: none;
+}
+
+@keyframes taglineFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 .enterButton {
   position: absolute;
   left: 50%;
