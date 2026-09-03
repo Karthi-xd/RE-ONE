@@ -1,12 +1,24 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import gsap from 'gsap'
 import deskScene from '../assets/desk-scene-extended.png'
 import styles from './LandingPage.module.css'
 
-export default function LandingPage() {
+interface LandingPageProps {
+  onEnter: () => void
+}
+
+export default function LandingPage({ onEnter }: LandingPageProps) {
   const imgWrapRef  = useRef<HTMLDivElement>(null)
   const canvasRef   = useRef<HTMLCanvasElement>(null)
   const lampRef     = useRef<HTMLDivElement>(null)
   const vignetteRef = useRef<HTMLDivElement>(null)
+  const sceneRef    = useRef<HTMLDivElement>(null)
+  const taglineRef  = useRef<HTMLParagraphElement>(null)
+  const buttonRef   = useRef<HTMLButtonElement>(null)
+  const flareRef    = useRef<HTMLDivElement>(null)
+  const whiteRef    = useRef<HTMLDivElement>(null)
+
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
   useEffect(() => {
     const imgWrap  = imgWrapRef.current!
@@ -128,13 +140,17 @@ export default function LandingPage() {
       const parX = curMX * 16 + jitterX
       const parY = curMY * 11 + jitterY
 
-      imgWrap.style.transform =
-        `translate3d(calc(${driftX}% + ${parX}px), calc(${driftY}% + ${parY}px), 0) scale(${scale})`
+      if (!isTransitioning) {
+        imgWrap.style.transform =
+          `translate3d(calc(${driftX}% + ${parX}px), calc(${driftY}% + ${parY}px), 0) scale(${scale})`
+      }
 
       canvas.style.transform =
         `translate3d(${curMX * 26}px, ${curMY * 18}px, 0)`
 
-      vignette.style.opacity = String(0.45 + 0.18 * breathe)
+      if (!isTransitioning) {
+        vignette.style.opacity = String(0.45 + 0.18 * breathe)
+      }
 
       curPX += (targetPX - curPX) * 0.08
       curPY += (targetPY - curPY) * 0.08
@@ -212,10 +228,62 @@ export default function LandingPage() {
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseleave', onMouseLeave)
     }
-  }, [])
+  }, [isTransitioning])
 
   function handleEnter() {
-    console.log('Enter clicked — main page not implemented yet')
+    if (isTransitioning) return
+    setIsTransitioning(true)
+
+    const tl = gsap.timeline({
+      onComplete: onEnter,
+    })
+
+    // 1. UI recedes — button and tagline dissolve upward, out of the way
+    tl.to(buttonRef.current, {
+      opacity: 0,
+      y: -14,
+      duration: 0.5,
+      ease: 'power2.in',
+    }, 0)
+    tl.to(taglineRef.current, {
+      opacity: 0,
+      y: -10,
+      duration: 0.5,
+      ease: 'power2.in',
+    }, 0)
+
+    // 2. Camera pushes in toward the diary — slow, deliberate lean-in
+    tl.to(imgWrapRef.current, {
+      scale: 1.55,
+      x: '+=1%',
+      y: '-=2%',
+      duration: 1.5,
+      ease: 'power2.inOut',
+    }, 0.1)
+
+    // 3. Vignette tightens as focus narrows toward the diary
+    tl.to(vignetteRef.current, {
+      opacity: 0.85,
+      duration: 1.2,
+      ease: 'power1.in',
+    }, 0.2)
+
+    // 4. Warm flare blooms from the diary's center, growing to fill the frame
+    tl.fromTo(flareRef.current,
+      { opacity: 0, scale: 0.3 },
+      { opacity: 1, scale: 1, duration: 0.9, ease: 'power2.in' },
+      1.15
+    )
+
+    // 5. Full whiteout — the "page turn" beat
+    tl.to(whiteRef.current, {
+      opacity: 1,
+      duration: 0.45,
+      ease: 'power2.in',
+    }, 1.75)
+
+    // 6. Hold briefly on white, then hand off to the main page
+    tl.to({}, { duration: 0.25 }, 2.2)
   }
 
   return (
@@ -239,14 +307,18 @@ export default function LandingPage() {
       <div ref={vignetteRef} className={styles.vignette} />
       <div className={styles.cornerMask} />
 
-      <p className={styles.tagline}>Step back into the years you remember.</p>
+      <div ref={flareRef} className={styles.flare} />
+      <div ref={whiteRef} className={styles.whiteout} />
+
 
       <button
+        ref={buttonRef}
         type="button"
         className={styles.enterButton}
         onClick={handleEnter}
+        disabled={isTransitioning}
       >
-        <span className={styles.enterLabel}>Open the Diary</span>
+        <span className={styles.enterLabel}>Enter RE:ONE</span>
       </button>
     </div>
   )

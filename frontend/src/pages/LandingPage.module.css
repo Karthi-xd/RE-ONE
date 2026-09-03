@@ -229,3 +229,28 @@
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-4px); }
 }
+/* Warm flare that blooms from the diary during the transition,
+   like light spilling out as the cover cracks open. */
+.flare {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 60vw;
+  height: 60vw;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 226, 170, 0.95), rgba(255, 200, 120, 0.4) 45%, transparent 72%);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 4;
+}
+
+/* Full whiteout beat that bridges landing page and main page. */
+.whiteout {
+  position: absolute;
+  inset: 0;
+  background: #fff6e8;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
