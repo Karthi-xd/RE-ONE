@@ -147,10 +147,10 @@
   transform: translateX(-50%);
   margin: 0;
   z-index: 3;
-  font-family: 'Playfair Display', serif;
-  font-weight: 500;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 300;
   font-size: clamp(1.5rem, 2.6vw, 2.2rem);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.06em;
   color: rgba(244, 231, 202, 0.85);
   text-shadow: 0 0 14px rgba(255, 195, 120, 0.35), 0 2px 5px rgba(0, 0, 0, 0.6);
   opacity: 0;
@@ -177,10 +177,10 @@
   border: none;
   padding: 0.5em 0.3em;
   cursor: pointer;
-  font-family: 'Playfair Display', serif;
-  font-weight: 500;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 600;
   font-size: clamp(1.6rem, 2.6vw, 2.15rem);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
   color: rgba(244, 231, 202, 0.85);
   text-shadow: 0 0 14px rgba(255, 195, 120, 0.35), 0 1px 3px rgba(0, 0, 0, 0.6);
   opacity: 0;
