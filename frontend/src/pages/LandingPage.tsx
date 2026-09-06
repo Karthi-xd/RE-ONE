@@ -12,11 +12,9 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
   const canvasRef   = useRef<HTMLCanvasElement>(null)
   const lampRef     = useRef<HTMLDivElement>(null)
   const vignetteRef = useRef<HTMLDivElement>(null)
-  const sceneRef    = useRef<HTMLDivElement>(null)
   const taglineRef  = useRef<HTMLParagraphElement>(null)
   const buttonRef   = useRef<HTMLButtonElement>(null)
-  const flareRef    = useRef<HTMLDivElement>(null)
-  const whiteRef    = useRef<HTMLDivElement>(null)
+  const fadeRef     = useRef<HTMLDivElement>(null)
 
   const [isTransitioning, setIsTransitioning] = useState(false)
 
@@ -238,52 +236,36 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       onComplete: onEnter,
     })
 
-    // 1. UI recedes — button and tagline dissolve upward, out of the way
-    tl.to(buttonRef.current, {
-      opacity: 0,
-      y: -14,
-      duration: 0.5,
-      ease: 'power2.in',
-    }, 0)
-    tl.to(taglineRef.current, {
+    // UI eases away first, quietly
+    tl.to([buttonRef.current, taglineRef.current], {
       opacity: 0,
       y: -10,
-      duration: 0.5,
-      ease: 'power2.in',
+      duration: 0.6,
+      ease: 'power2.inOut',
     }, 0)
 
-    // 2. Camera pushes in toward the diary — slow, deliberate lean-in
+    // Scene gently pushes in and settles back, softly darkening
     tl.to(imgWrapRef.current, {
-      scale: 1.55,
-      x: '+=1%',
-      y: '-=2%',
-      duration: 1.5,
-      ease: 'power2.inOut',
+      scale: 1.08,
+      duration: 1.6,
+      ease: 'power1.inOut',
     }, 0.1)
 
-    // 3. Vignette tightens as focus narrows toward the diary
     tl.to(vignetteRef.current, {
-      opacity: 0.85,
-      duration: 1.2,
-      ease: 'power1.in',
+      opacity: 0.9,
+      duration: 1.4,
+      ease: 'power1.inOut',
     }, 0.2)
 
-    // 4. Warm flare blooms from the diary's center, growing to fill the frame
-    tl.fromTo(flareRef.current,
-      { opacity: 0, scale: 0.3 },
-      { opacity: 1, scale: 1, duration: 0.9, ease: 'power2.in' },
-      1.15
-    )
-
-    // 5. Full whiteout — the "page turn" beat
-    tl.to(whiteRef.current, {
+    // A single smooth fade to black bridges the two pages
+    tl.to(fadeRef.current, {
       opacity: 1,
-      duration: 0.45,
-      ease: 'power2.in',
-    }, 1.75)
+      duration: 0.9,
+      ease: 'power2.inOut',
+    }, 0.9)
 
-    // 6. Hold briefly on white, then hand off to the main page
-    tl.to({}, { duration: 0.25 }, 2.2)
+    // Brief hold on black before handing off
+    tl.to({}, { duration: 0.2 }, 1.7)
   }
 
   return (
@@ -307,9 +289,11 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       <div ref={vignetteRef} className={styles.vignette} />
       <div className={styles.cornerMask} />
 
-      <div ref={flareRef} className={styles.flare} />
-      <div ref={whiteRef} className={styles.whiteout} />
+      <div ref={fadeRef} className={styles.fadeToBlack} />
 
+      <p ref={taglineRef} className={styles.tagline}>
+        Step back into the years you remember.
+      </p>
 
       <button
         ref={buttonRef}
@@ -318,7 +302,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
         onClick={handleEnter}
         disabled={isTransitioning}
       >
-        <span className={styles.enterLabel}>Enter RE:ONE</span>
+        <span className={styles.enterLabel}>Open the Diary</span>
       </button>
     </div>
   )
