@@ -1,0 +1,38 @@
+.desktop {
+  width: 100%;
+  height: 100vh;
+  background: #12100d;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 90px);
+  gap: 24px;
+}
+
+.yearIcon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  color: #f4e7ca;
+  font-family: sans-serif;
+}
+
+.folderGlyph {
+  font-size: 40px;
+}
+
+.yearLabel {
+  font-size: 13px;
+}
+
+.yearIcon:hover .folderGlyph {
+  filter: drop-shadow(0 0 6px rgba(255, 200, 130, 0.6));
+}
