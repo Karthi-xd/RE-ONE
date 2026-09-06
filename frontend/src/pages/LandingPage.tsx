@@ -302,7 +302,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
         onClick={handleEnter}
         disabled={isTransitioning}
       >
-        <span className={styles.enterLabel}>Open the Diary</span>
+        <span className={styles.enterLabel}>Login</span>
       </button>
     </div>
   )
