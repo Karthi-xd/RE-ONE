@@ -291,10 +291,6 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
 
       <div ref={fadeRef} className={styles.fadeToBlack} />
 
-      <p ref={taglineRef} className={styles.tagline}>
-        Step back into the years you remember.
-      </p>
-
       <button
         ref={buttonRef}
         type="button"
