@@ -1,0 +1,243 @@
+.root {
+  --win-face: #ece9d8;
+  --win-face-dark: #d4d0c8;
+  --title-blue-1: #0a246a;
+  --title-blue-2: #3a6ea5;
+  --title-blue-3: #a6caf0;
+  --border-dark: #0a246a;
+  --btn-face: #ece9d8;
+  --btn-shadow: #808080;
+  --btn-highlight: #ffffff;
+  --font-ui: Tahoma, 'MS Sans Serif', Geneva, sans-serif;
+
+  position: fixed;
+  inset: 0;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  overflow: hidden;
+}
+
+.desktop {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-image: var(--wallpaper-url);
+  background-size: cover;
+  background-position: center bottom;
+  background-color: #1e5aa8;
+  overflow: hidden;
+  user-select: none;
+}
+
+.iconLayer {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: calc(100vh - 60px);
+  gap: 2px;
+}
+
+.desktopIcon {
+  width: 78px;
+  height: 78px;
+  margin: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px;
+  border: 1px dotted transparent;
+  cursor: default;
+  text-align: center;
+  background: none;
+}
+
+.desktopIcon.selected {
+  background: rgba(50, 90, 180, 0.35);
+  border: 1px dotted #fff;
+}
+
+.iconGlyph {
+  width: 40px;
+  height: 34px;
+  margin-bottom: 4px;
+  filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.iconLabel {
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  text-shadow: 1px 1px 2px #000, 0 0 2px #000;
+  word-break: break-word;
+}
+
+.desktopIcon.selected .iconLabel {
+  background: #0a246a;
+  text-shadow: none;
+  padding: 0 2px;
+}
+
+/* ---------------- Taskbar ---------------- */
+.taskbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 32px;
+  background: linear-gradient(180deg, #2a8a3e 0%, #226e30 5%, #1c5c26 92%, #143f1a 100%);
+  display: flex;
+  align-items: center;
+  z-index: 1000;
+  box-shadow: 0 -1px 0 #4fb85f, inset 0 1px 0 #63c96f;
+}
+
+.startBtn {
+  height: 26px;
+  margin: 3px 4px;
+  padding: 0 12px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(180deg, #4caf50, #2f7a34 45%, #1e5c22);
+  border-radius: 4px;
+  color: #fff;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 13px;
+  border: 1px solid #1a4a1e;
+  cursor: pointer;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.startBtn:active {
+  background: linear-gradient(180deg, #1e5c22, #2f7a34 55%, #4caf50);
+}
+
+.flag {
+  width: 18px;
+  height: 18px;
+  background: conic-gradient(#f25022 0 90deg, #7fba00 90deg 180deg, #00a4ef 180deg 270deg, #ffb900 270deg 360deg);
+  border-radius: 2px;
+}
+
+.taskbarSep {
+  width: 2px;
+  height: 24px;
+  background: #0f2f12;
+  box-shadow: 1px 0 0 #4fb85f;
+  margin: 0 4px;
+}
+
+.taskbarItems {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 4px;
+  height: 100%;
+  align-items: center;
+  overflow: hidden;
+}
+
+.taskbarItem {
+  height: 24px;
+  min-width: 130px;
+  max-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  background: linear-gradient(180deg, #3a9a48, #1f6b2a);
+  border: 1px solid #143f1a;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.taskbarItem.active {
+  background: linear-gradient(180deg, #134018, #0c2c10);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.tbIcon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.tray {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px;
+  background: linear-gradient(180deg, #1c5c26, #134018);
+  border-left: 1px solid #0f2f12;
+  color: #fff;
+  font-size: 11px;
+}
+
+/* ---------------- Start Menu ---------------- */
+.startMenu {
+  position: fixed;
+  left: 2px;
+  bottom: 34px;
+  width: 280px;
+  background: var(--win-face);
+  border: 1px solid #0a246a;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: row;
+  z-index: 1001;
+  border-radius: 6px 6px 6px 0;
+  overflow: hidden;
+}
+
+.sideStrip {
+  width: 28px;
+  background: linear-gradient(180deg, #2f7a34, #1c5c26);
+}
+
+.menuCol {
+  flex: 1;
+  padding: 6px 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.menuHeader {
+  background: linear-gradient(180deg, #3a6ea5, #0a246a);
+  color: #fff;
+  font-weight: bold;
+  font-size: 13px;
+  padding: 8px 10px;
+  margin: -6px 0 6px 0;
+}
+
+.startItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.startItem:hover {
+  background: #316ac5;
+  color: #fff;
+}
+
+.startItemIcon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
