@@ -1,0 +1,194 @@
+.menubar {
+  flex: 0 0 20px;
+  background: var(--win-face);
+  border-bottom: 1px solid var(--btn-shadow);
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  font-size: 11px;
+  gap: 14px;
+}
+.menubar span {
+  padding: 2px 4px;
+  cursor: default;
+}
+.menubar span:hover {
+  background: #316ac5;
+  color: #fff;
+}
+
+.toolbar {
+  flex: 0 0 auto;
+  background: var(--win-face);
+  border-bottom: 1px solid var(--btn-shadow);
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.addressbar {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--btn-shadow);
+  padding: 2px 4px;
+  gap: 4px;
+}
+.addressbar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: var(--font-ui);
+  font-size: 11px;
+}
+
+.winBody {
+  flex: 1 1 auto;
+  background: #fff;
+  overflow: auto;
+  position: relative;
+}
+
+.statusbar {
+  flex: 0 0 20px;
+  background: var(--win-face);
+  border-top: 1px solid #fff;
+  box-shadow: 0 -1px 0 var(--btn-shadow);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  color: #333;
+}
+
+.winBtn {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 5px 14px;
+  background: var(--btn-face);
+  border: 2px solid;
+  border-top-color: #fff;
+  border-left-color: #fff;
+  border-right-color: #616161;
+  border-bottom-color: #616161;
+  cursor: pointer;
+}
+.winBtn:active {
+  border-top-color: #616161;
+  border-left-color: #616161;
+  border-right-color: #fff;
+  border-bottom-color: #fff;
+}
+.winBtn:disabled {
+  color: #888;
+  cursor: default;
+}
+
+.winInput,
+.winSelect {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 4px 5px;
+  border: 1px solid var(--btn-shadow);
+  border-top-color: #404040;
+  border-left-color: #404040;
+  background: #fff;
+}
+
+/* ---------------- Explorer-style file grid ---------------- */
+.explorerBody {
+  display: flex;
+  height: 100%;
+}
+.explorerSidebar {
+  width: 150px;
+  background: linear-gradient(180deg, #a6caf0, #d6e6f9 40%, #eef5fc);
+  border-right: 1px solid #7f9db9;
+  padding: 8px 6px;
+  font-size: 11px;
+  color: #0a246a;
+  flex: 0 0 150px;
+  overflow: auto;
+}
+.explorerSidebar h3 {
+  font-size: 12px;
+  margin: 6px 0 4px 0;
+  color: #0a246a;
+}
+.explorerSidebar ul {
+  list-style: none;
+  margin: 0 0 10px 0;
+  padding: 0;
+}
+.explorerSidebar li {
+  padding: 2px 0 2px 18px;
+  position: relative;
+  cursor: pointer;
+}
+.explorerSidebar li:hover {
+  text-decoration: underline;
+}
+.explorerSidebar li.active {
+  font-weight: bold;
+  text-decoration: underline;
+}
+.explorerSidebar li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, #ffe07a, #f5b942);
+  border: 1px solid #a87c1c;
+  border-radius: 1px;
+}
+.explorerMain {
+  flex: 1 1 auto;
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  overflow: auto;
+}
+.fileItem {
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 6px 4px;
+  border: 1px dotted transparent;
+  font-size: 11px;
+  color: #000;
+  cursor: default;
+}
+.fileItem:hover {
+  background: #e6efff;
+  border: 1px dotted #99b8e0;
+}
+.fileItem .fileGlyph {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, #fefefe, #dfe8f5);
+  border: 1px solid #7f9db9;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.fileItem .fileName {
+  line-height: 1.25;
+  word-break: break-word;
+}
+.emptyFolderMsg {
+  padding: 24px;
+  color: #666;
+  font-style: italic;
+}
