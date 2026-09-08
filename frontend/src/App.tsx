@@ -1,15 +1,13 @@
+import { useState } from 'react'
 import LandingPage from './pages/LandingPage'
-
-// Static, vintage-computer-styled desktop that lives in /public and is
-// served as-is (no React involved) at this path once built/deployed.
-const DESKTOP_URL = '/main-desktop.html'
+import Desktop from './desktop/Desktop'
 
 export default function App() {
-  return (
-    <LandingPage
-      onEnter={() => {
-        window.location.href = DESKTOP_URL
-      }}
-    />
-  )
+  const [entered, setEntered] = useState(false)
+
+  if (entered) {
+    return <Desktop />
+  }
+
+  return <LandingPage onEnter={() => setEntered(true)} />
 }
