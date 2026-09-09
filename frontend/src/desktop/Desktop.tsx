@@ -32,16 +32,24 @@ interface DesktopIconDef {
   glyph: GlyphId
 }
 
+// Shown as icons directly on the desktop.
 const desktopIcons: DesktopIconDef[] = [
   { id: 'mycomputer', label: 'My Computer', glyph: 'computer' },
   { id: 'mydocs', label: 'My Documents', glyph: 'docs' },
-  { id: 'rag', label: 'Historical RAG', glyph: 'rag' },
   ...YEARS.map((y) => ({ id: y, label: y, glyph: 'folder' as GlyphId })),
+  { id: 'recyclebin', label: 'Recycle Bin', glyph: 'recycle' },
+]
+
+// Shown only inside the Start menu, not on the desktop itself.
+const startOnlyItems: DesktopIconDef[] = [
+  { id: 'rag', label: 'Historical RAG', glyph: 'rag' },
   { id: 'notepad', label: 'Notepad', glyph: 'notepad' },
   { id: 'paint', label: 'Paint', glyph: 'paint' },
   { id: 'calculator', label: 'Calculator', glyph: 'calculator' },
-  { id: 'recyclebin', label: 'Recycle Bin', glyph: 'recycle' },
 ]
+
+// Full list used anywhere all apps need to be enumerated (e.g. My Computer body).
+const allApps: DesktopIconDef[] = [...desktopIcons, ...startOnlyItems]
 
 function pad(n: number) {
   return n.toString().padStart(2, '0')
@@ -251,7 +259,7 @@ export default function Desktop() {
           <div className={styles.sideStrip} />
           <div className={styles.menuCol}>
             <div className={styles.menuHeader}>Historical Archive</div>
-            {desktopIcons.map((ic) => (
+            {allApps.map((ic) => (
               <div
                 key={ic.id}
                 className={styles.startItem}
