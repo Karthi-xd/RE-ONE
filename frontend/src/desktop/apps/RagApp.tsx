@@ -3,7 +3,7 @@ import shared from './shared.module.css'
 import styles from './RagApp.module.css'
 import { YEARS } from './ExplorerApp'
 
-const RAG_API_ENDPOINT = 'http://127.0.0.1:8000/search'
+const RAG_API_ENDPOINT = 'http://127.0.0.1:8000/api/chat'
 
 interface ResultCard {
   title?: string
@@ -25,7 +25,7 @@ interface RagAppProps {
 
 export default function RagApp({ prefillYear }: RagAppProps) {
   const [query, setQuery] = useState('')
-  const [year, setYear] = useState(prefillYear || 'all')
+  const [year, setYear] = useState(prefillYear || YEARS[0])
   const [status, setStatus] = useState('Enter a question and press Search.')
   const [statusBar, setStatusBar] = useState('Ready')
   const [isError, setIsError] = useState(false)
@@ -49,11 +49,18 @@ export default function RagApp({ prefillYear }: RagAppProps) {
       const response = await fetch(RAG_API_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, year }),
+        body: JSON.stringify({ question: q, year: Number(year) }),
       })
       if (!response.ok) throw new Error(`RAG backend returned ${response.status}: ${response.statusText}`)
       const data = await response.json()
-      const list: ResultCard[] = Array.isArray(data) ? data : data.results || data.items || []
+      // Backend /api/chat returns { year, question, answer, sources: [...] }
+      const list: ResultCard[] = (data.sources || []).map((s: any) => ({
+        title: s.title,
+        year: data.year,
+        date: s.date,
+        snippet: data.answer,
+        source: s.source || s.category,
+      }))
       setResults(list)
       setStatus(`Found ${list.length} result${list.length === 1 ? '' : 's'}.`)
       setStatusBar('Search complete.')
@@ -101,7 +108,6 @@ export default function RagApp({ prefillYear }: RagAppProps) {
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
               >
-                <option value="all">All years</option>
                 {YEARS.map((y) => (
                   <option key={y} value={y}>
                     {y}
