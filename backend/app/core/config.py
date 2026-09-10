@@ -1,5 +1,5 @@
 from pathlib import Path
-frfrom pathlib import Path
+from pathlib import Path
 from pydantic_settings import BaseSettings
 import chromadb
 

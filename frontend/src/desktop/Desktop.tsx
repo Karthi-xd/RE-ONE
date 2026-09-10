@@ -4,6 +4,7 @@ import Window, { type WindowRect } from './Window'
 import { Glyph, type GlyphId } from './icons'
 import ExplorerApp, { YEARS } from './apps/ExplorerApp'
 import RagApp from './apps/RagApp'
+import MemoryApp from './apps/MemoryApp'
 import MyComputerApp from './apps/MyComputerApp'
 import RecycleBinApp from './apps/RecycleBinApp'
 import NotepadApp from './apps/NotepadApp'
@@ -11,7 +12,7 @@ import CalculatorApp from './apps/CalculatorApp'
 import PaintApp from './apps/PaintApp'
 import wallpaperUrl from '../assets/desktop-wallpaper.jpg'
 
-type AppKind = 'explorer' | 'rag' | 'mycomputer' | 'recyclebin' | 'notepad' | 'calculator' | 'paint'
+type AppKind = 'explorer' | 'memory' | 'rag' | 'mycomputer' | 'recyclebin' | 'notepad' | 'calculator' | 'paint'
 
 interface WinEntry {
   id: string
@@ -116,7 +117,7 @@ export default function Desktop() {
 
   function openApp(id: string) {
     if (YEARS.includes(id)) {
-      openWindow(`folder-${id}`, 'explorer', `${id} - Historical Archive`, 'folder', { year: id, width: 620, height: 420 })
+      openWindow(`folder-${id}`, 'memory', `${id} - Historical Archive`, 'folder', { year: id, width: 760, height: 560 })
       return
     }
     switch (id) {
@@ -145,7 +146,7 @@ export default function Desktop() {
   }
 
   function openYearFolder(year: string) {
-    openWindow(`folder-${year}`, 'explorer', `${year} - Historical Archive`, 'folder', { year, width: 620, height: 420 })
+    openWindow(`folder-${year}`, 'memory', `${year} - Historical Archive`, 'folder', { year, width: 760, height: 560 })
   }
 
   function openRag(year?: string) {
@@ -191,6 +192,8 @@ export default function Desktop() {
     switch (w.kind) {
       case 'explorer':
         return <ExplorerApp year={w.year ?? null} onOpenYear={openYearFolder} onOpenRag={openRag} />
+      case 'memory':
+        return <MemoryApp year={w.year ?? YEARS[0]} />
       case 'rag':
         return <RagApp prefillYear={w.year ?? undefined} />
       case 'mycomputer':

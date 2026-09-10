@@ -1,0 +1,171 @@
+.root {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #0a0806;
+  font-family: 'Lato', sans-serif;
+}
+
+.imgWrap {
+  position: absolute;
+  top: -4%;
+  left: -4%;
+  width: 108%;
+  height: 108%;
+  animation: slowDrift 26s ease-in-out infinite alternate;
+}
+
+.photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(0.92) contrast(1.03);
+}
+
+@keyframes slowDrift {
+  0%   { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.06) translate(-1%, -1%); }
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(10, 8, 6, 0.65) 100%);
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  background: radial-gradient(rgba(255, 240, 210, 0.06) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+.tag {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(20, 15, 10, 0.45);
+  border: 1px solid rgba(244, 231, 202, 0.25);
+  backdrop-filter: blur(2px);
+  border-radius: 2px;
+}
+
+.tagYear {
+  font-family: 'Special Elite', monospace;
+  font-size: 16px;
+  color: rgba(255, 236, 205, 0.92);
+  text-shadow: 0 0 10px rgba(255, 195, 120, 0.35);
+  letter-spacing: 0.04em;
+}
+
+.tagLabel {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(244, 231, 202, 0.55);
+}
+
+.chatDock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 55%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(20, 14, 9, 0) 0%, rgba(18, 13, 8, 0.72) 22%, rgba(14, 10, 7, 0.9) 100%);
+  padding: 18px 14px 12px;
+}
+
+.chatLog {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-right: 4px;
+}
+
+.bubble {
+  max-width: 72%;
+  padding: 8px 12px;
+  font-family: 'Lato', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.5;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.bubbleAi {
+  align-self: flex-start;
+  background: rgba(244, 231, 202, 0.14);
+  border: 1px solid rgba(244, 231, 202, 0.22);
+  color: rgba(250, 240, 220, 0.92);
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+}
+
+.bubbleUser {
+  align-self: flex-end;
+  background: rgba(255, 196, 120, 0.85);
+  color: #241505;
+}
+
+.chatInputRow {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+}
+
+.chatInput {
+  flex: 1 1 auto;
+  padding: 9px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(244, 231, 202, 0.3);
+  background: rgba(255, 250, 240, 0.08);
+  color: rgba(250, 240, 220, 0.95);
+  font-family: 'Lato', sans-serif;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.chatInput::placeholder {
+  color: rgba(244, 231, 202, 0.45);
+}
+
+.chatInput:focus {
+  border-color: rgba(255, 195, 120, 0.6);
+  background: rgba(255, 250, 240, 0.12);
+}
+
+.chatSend {
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 195, 120, 0.5);
+  background: rgba(255, 196, 120, 0.18);
+  color: rgba(255, 236, 205, 0.95);
+  font-family: 'Chakra Petch', sans-serif;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.chatSend:hover {
+  background: rgba(255, 196, 120, 0.3);
+  border-color: rgba(255, 195, 120, 0.8);
+}
