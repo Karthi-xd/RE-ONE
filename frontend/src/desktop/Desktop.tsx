@@ -4,7 +4,6 @@ import Window, { type WindowRect } from './Window'
 import { Glyph, type GlyphId } from './icons'
 import ExplorerApp, { YEARS } from './apps/ExplorerApp'
 import RagApp from './apps/RagApp'
-import MemoryApp from './apps/MemoryApp'
 import MyComputerApp from './apps/MyComputerApp'
 import RecycleBinApp from './apps/RecycleBinApp'
 import NotepadApp from './apps/NotepadApp'
@@ -12,7 +11,7 @@ import CalculatorApp from './apps/CalculatorApp'
 import PaintApp from './apps/PaintApp'
 import wallpaperUrl from '../assets/desktop-wallpaper.jpg'
 
-type AppKind = 'explorer' | 'memory' | 'rag' | 'mycomputer' | 'recyclebin' | 'notepad' | 'calculator' | 'paint'
+type AppKind = 'explorer' | 'rag' | 'mycomputer' | 'recyclebin' | 'notepad' | 'calculator' | 'paint'
 
 interface WinEntry {
   id: string
@@ -64,7 +63,11 @@ function formatClock(d: Date) {
   return `${h}:${pad(d.getMinutes())} ${ampm}`
 }
 
-export default function Desktop() {
+interface DesktopProps {
+  onOpenMemory: (year: string) => void
+}
+
+export default function Desktop({ onOpenMemory }: DesktopProps) {
   const [windows, setWindows] = useState<WinEntry[]>([])
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
@@ -153,10 +156,6 @@ export default function Desktop() {
     openWindow('rag', 'rag', 'Historical RAG', 'rag', { year: year ?? null, width: 560, height: 460 })
   }
 
-  function openMemory(year: string) {
-    openWindow(`memory-${year}`, 'memory', `${year} - Historical Archive`, 'folder', { year, width: 760, height: 560 })
-  }
-
   function closeWindow(id: string) {
     setWindows((ws) => ws.filter((w) => w.id !== id))
     setFocusedId((f) => (f === id ? null : f))
@@ -195,9 +194,7 @@ export default function Desktop() {
   function renderAppBody(w: WinEntry) {
     switch (w.kind) {
       case 'explorer':
-        return <ExplorerApp year={w.year ?? null} onOpenYear={openYearFolder} onOpenRag={openRag} onOpenMemory={openMemory} />
-      case 'memory':
-        return <MemoryApp year={w.year ?? YEARS[0]} />
+        return <ExplorerApp year={w.year ?? null} onOpenYear={openYearFolder} onOpenRag={openRag} onOpenMemory={onOpenMemory} />
       case 'rag':
         return <RagApp prefillYear={w.year ?? undefined} />
       case 'mycomputer':
