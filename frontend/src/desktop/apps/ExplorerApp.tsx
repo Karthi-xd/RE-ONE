@@ -6,17 +6,10 @@ interface ExplorerAppProps {
   year: string | null
   onOpenYear: (year: string) => void
   onOpenRag: (year?: string) => void
+  onOpenMemory: (year: string) => void
 }
 
-export default function ExplorerApp({ year, onOpenYear, onOpenRag }: ExplorerAppProps) {
-  const items = year
-    ? [
-        { name: `${year}_records.pdf`, glyph: '📄' },
-        { name: `${year}_summary.docx`, glyph: '📝' },
-        { name: `${year}_dataset.csv`, glyph: '📊' },
-      ]
-    : []
-
+export default function ExplorerApp({ year, onOpenYear, onOpenRag, onOpenMemory }: ExplorerAppProps) {
   return (
     <>
       <div className={shared.menubar}>
@@ -57,24 +50,21 @@ export default function ExplorerApp({ year, onOpenYear, onOpenRag }: ExplorerApp
           </div>
           <div className={shared.explorerMain}>
             {!year && <div className={shared.emptyFolderMsg}>This folder is empty. Try a year folder or Historical RAG.</div>}
-            {year &&
-              items.map((it) => (
-                <div className={shared.fileItem} key={it.name}>
-                  <div className={shared.fileGlyph}>{it.glyph}</div>
-                  <div className={shared.fileName}>{it.name}</div>
-                </div>
-              ))}
             {year && (
-              <div className={shared.fileItem} style={{ cursor: 'pointer' }} onDoubleClick={() => onOpenRag(year)}>
-                <div className={shared.fileGlyph}>🔍</div>
-                <div className={shared.fileName}>Search {year} in RAG…</div>
+              <div
+                className={shared.fileItem}
+                style={{ cursor: 'pointer' }}
+                onDoubleClick={() => onOpenMemory(year)}
+              >
+                <div className={shared.fileGlyph}>📔</div>
+                <div className={shared.fileName}>Enter {year}</div>
               </div>
             )}
           </div>
         </div>
       </div>
       <div className={shared.statusbar}>
-        <span>{year ? `${items.length + 1} items` : '0 items'}</span>
+        <span>{year ? '1 item' : '0 items'}</span>
       </div>
     </>
   )

@@ -117,7 +117,7 @@ export default function Desktop() {
 
   function openApp(id: string) {
     if (YEARS.includes(id)) {
-      openWindow(`folder-${id}`, 'memory', `${id} - Historical Archive`, 'folder', { year: id, width: 760, height: 560 })
+      openWindow(`folder-${id}`, 'explorer', `${id} - Historical Archive`, 'folder', { year: id, width: 620, height: 420 })
       return
     }
     switch (id) {
@@ -146,11 +146,15 @@ export default function Desktop() {
   }
 
   function openYearFolder(year: string) {
-    openWindow(`folder-${year}`, 'memory', `${year} - Historical Archive`, 'folder', { year, width: 760, height: 560 })
+    openWindow(`folder-${year}`, 'explorer', `${year} - Historical Archive`, 'folder', { year, width: 620, height: 420 })
   }
 
   function openRag(year?: string) {
     openWindow('rag', 'rag', 'Historical RAG', 'rag', { year: year ?? null, width: 560, height: 460 })
+  }
+
+  function openMemory(year: string) {
+    openWindow(`memory-${year}`, 'memory', `${year} - Historical Archive`, 'folder', { year, width: 760, height: 560 })
   }
 
   function closeWindow(id: string) {
@@ -191,7 +195,7 @@ export default function Desktop() {
   function renderAppBody(w: WinEntry) {
     switch (w.kind) {
       case 'explorer':
-        return <ExplorerApp year={w.year ?? null} onOpenYear={openYearFolder} onOpenRag={openRag} />
+        return <ExplorerApp year={w.year ?? null} onOpenYear={openYearFolder} onOpenRag={openRag} onOpenMemory={openMemory} />
       case 'memory':
         return <MemoryApp year={w.year ?? YEARS[0]} />
       case 'rag':
