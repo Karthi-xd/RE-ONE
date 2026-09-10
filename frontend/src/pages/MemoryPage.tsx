@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import styles from './MemoryPage.module.css'
 
 // Static imports so Vite bundles + hashes these correctly.
@@ -17,6 +18,11 @@ const YEAR_IMAGES: Record<string, string> = {
   '2020': img2020,
 }
 
+// Minimum time the loading screen stays up, even if the image is cached
+// and loads instantly — keeps the transition feeling intentional rather
+// than like a flicker.
+const MIN_LOADING_MS = 700
+
 interface MemoryPageProps {
   year: string
   onBack: () => void
@@ -24,11 +30,52 @@ interface MemoryPageProps {
 
 export default function MemoryPage({ year, onBack }: MemoryPageProps) {
   const image = YEAR_IMAGES[year]
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    setLoaded(false)
+    let cancelled = false
+
+    const minDelay = new Promise<void>((resolve) => setTimeout(resolve, MIN_LOADING_MS))
+    const imageReady = new Promise<void>((resolve) => {
+      const preload = new window.Image()
+      preload.src = image
+      if (preload.complete) {
+        resolve()
+      } else {
+        preload.onload = () => resolve()
+        preload.onerror = () => resolve()
+      }
+    })
+
+    Promise.all([minDelay, imageReady]).then(() => {
+      if (!cancelled) setLoaded(true)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [image])
 
   return (
     <div className={styles.root}>
-      <img src={image} alt={`A memory from ${year}`} className={styles.photo} />
-      <button type="button" className={styles.backBtn} onClick={onBack}>
+      <div className={`${styles.loading} ${loaded ? styles.loadingHidden : ''}`}>
+        <div className={styles.spinner} />
+        <div className={styles.loadingText}>Loading {year}…</div>
+      </div>
+
+      <img
+        src={image}
+        alt={`A memory from ${year}`}
+        className={`${styles.photo} ${loaded ? styles.photoVisible : ''}`}
+      />
+
+      <button
+        type="button"
+        className={styles.backBtn}
+        onClick={onBack}
+        style={{ opacity: loaded ? 1 : 0, pointerEvents: loaded ? 'auto' : 'none' }}
+      >
         ← Back
       </button>
     </div>
