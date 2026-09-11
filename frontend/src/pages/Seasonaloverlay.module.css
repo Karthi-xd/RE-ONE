@@ -1,0 +1,54 @@
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 2;
+}
+
+.mood {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.bloom {
+  background: radial-gradient(ellipse at 50% 30%, rgba(255, 246, 214, 0.16), transparent 62%);
+  mix-blend-mode: soft-light;
+  animation: moodBreathe 6s ease-in-out infinite;
+}
+
+.pollen {
+  background: radial-gradient(ellipse at 50% 40%, rgba(255, 250, 225, 0.12), transparent 65%);
+  mix-blend-mode: soft-light;
+  animation: moodBreathe 8s ease-in-out infinite;
+}
+
+.gale {
+  background: radial-gradient(ellipse at 50% 50%, rgba(40, 50, 60, 0) 40%, rgba(20, 28, 36, 0.4) 100%);
+  animation: moodBreathe 5s ease-in-out infinite;
+}
+
+.downpour {
+  background: radial-gradient(ellipse at 50% 50%, rgba(30, 40, 55, 0) 35%, rgba(10, 16, 26, 0.5) 100%);
+  animation: moodBreathe 4s ease-in-out infinite;
+}
+
+.goldenfall {
+  background: radial-gradient(ellipse at 50% 35%, rgba(255, 195, 110, 0.14), transparent 65%);
+  mix-blend-mode: soft-light;
+  animation: moodBreathe 7s ease-in-out infinite;
+}
+
+.duskember {
+  background: radial-gradient(ellipse at 50% 45%, rgba(255, 120, 80, 0.16), rgba(35, 10, 30, 0.35) 100%);
+  animation: moodBreathe 6s ease-in-out infinite;
+}
+
+@keyframes moodBreathe {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
