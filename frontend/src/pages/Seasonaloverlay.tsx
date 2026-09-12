@@ -2,37 +2,104 @@ import { useEffect, useRef } from 'react'
 import styles from './SeasonalOverlay.module.css'
 
 // Each year gets its own weather, matched to what's actually happening
-// in that year's photo rather than a generic "season" guess:
+// in that year's photo:
 //   2015 - calm sunlit meadow          -> soft rising light motes
 //   2016 - same meadow, different mood -> drifting pollen/seed fluff
-//   2017 - storm rolling in, leaves just turning -> wind-blown leaves + distant lightning
-//   2018 - rain actually falling        -> streaking rain + thunder flash
-//   2019 - full gold autumn, leaves airborne -> leaves cascading down
-//   2020 - dusk, deep red leaves, hazy sky -> rising embers, falling leaves, stars
-type EffectId = 'bloom' | 'pollen' | 'gale' | 'downpour' | 'goldenfall' | 'duskember'
+//   2017 - actual snowfall             -> real snow particles, gentle sway
+//   2018 - rain actually falling       -> streaking rain + thunder flash
+//   2019 - full gold autumn, big gust  -> leaves cut from the real photo, falling
+//   2020 - dusk, deep red leaves       -> leaves cut from the real photo, falling
+//
+// For 2019/2020 the falling leaves are literal crops of the photo's own
+// canopy pixels (via canvas drawImage sampling a small clipped region of
+// the actual <img>), not painted shapes - so their color and texture
+// exactly match the real leaves in that photo.
+//
+// Rendering is split across two stacked canvases:
+//   - glowCanvas (mix-blend-mode: screen) is for soft LIGHT: dust motes,
+//     rain streaks, snow.
+//   - solidCanvas (normal blending) is for OBJECTS with real texture:
+//     the photo-sampled leaf sprites.
+type EffectId = 'bloom' | 'pollen' | 'snowfall' | 'downpour' | 'goldenfall' | 'duskember'
+type LeafEffect = 'goldenfall' | 'duskember'
 
 const YEAR_EFFECT: Record<string, EffectId> = {
   '2015': 'bloom',
   '2016': 'pollen',
-  '2017': 'gale',
+  '2017': 'snowfall',
   '2018': 'downpour',
   '2019': 'goldenfall',
   '2020': 'duskember',
 }
 
-interface SeasonalOverlayProps {
-  year: string
+// Leaves are simulated as real projectiles: a burst velocity off the tree,
+// then every frame gravity pulls them down and drag slows them, so they
+// naturally arc, decelerate, and tumble.
+// Angle convention: 0deg = rightward, negative = upward (canvas y is down).
+const LEAF_CONFIG: Record<
+  LeafEffect,
+  {
+    angleMin: number
+    angleMax: number
+    speedMin: number
+    speedMax: number
+    drag: number
+    gravity: number
+    flutterAmp: number
+    flutterFreq: number
+    spinBase: number
+    count: number
+  }
+> = {
+  // 2019: a real gust tears leaves up and off the canopy, they arc over, then fall
+  goldenfall: {
+    angleMin: -78,
+    angleMax: -34,
+    speedMin: 3.2,
+    speedMax: 6.2,
+    drag: 0.965,
+    gravity: 0.05,
+    flutterAmp: 1.0,
+    flutterFreq: 0.045,
+    spinBase: 0.22,
+    count: 26,
+  },
+  // 2020: still dusk air, just a few leaves gently sifting down
+  duskember: {
+    angleMin: -50,
+    angleMax: 8,
+    speedMin: 1.0,
+    speedMax: 2.2,
+    drag: 0.975,
+    gravity: 0.032,
+    flutterAmp: 0.75,
+    flutterFreq: 0.04,
+    spinBase: 0.14,
+    count: 9,
+  },
 }
 
-export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+// Where the leaf sprites are cropped from, as a fraction of the photo's
+// natural size - the canopy area where the real leaves actually are.
+const CANOPY_RECT = { xMin: 0.34, xMax: 0.66, yMin: 0.15, yMax: 0.5 }
+
+interface SeasonalOverlayProps {
+  year: string
+  imageSrc: string
+}
+
+export default function SeasonalOverlay({ year, imageSrc }: SeasonalOverlayProps) {
+  const glowRef = useRef<HTMLCanvasElement>(null)
+  const solidRef = useRef<HTMLCanvasElement>(null)
   const effect = YEAR_EFFECT[year] ?? 'bloom'
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const glow = glowRef.current
+    const solid = solidRef.current
+    if (!glow || !solid) return
+    const gctx = glow.getContext('2d')
+    const sctx = solid.getContext('2d')
+    if (!gctx || !sctx) return
 
     let W = window.innerWidth
     let H = window.innerHeight
@@ -40,40 +107,47 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
     function resize() {
       W = window.innerWidth
       H = window.innerHeight
-      canvas!.width = W
-      canvas!.height = H
+      glow!.width = W
+      glow!.height = H
+      solid!.width = W
+      solid!.height = H
     }
     resize()
     window.addEventListener('resize', resize)
 
     interface Drop { x: number; y: number; vy: number; len: number; alpha: number }
+    interface Flake {
+      x: number; y: number; vy: number
+      size: number; alpha: number
+      swayPhase: number; swayAmp: number; swayFreq: number
+    }
     interface Leaf {
       x: number; y: number; vx: number; vy: number
-      size: number; rot: number; vr: number; sway: number; phase: number
-      color: string; alpha: number
+      size: number; rot: number; vr: number; flutterPhase: number
+      cropSX: number; cropSY: number; cropW: number; cropH: number
+      alpha: number
     }
     interface Mote {
       x: number; y: number; vx: number; vy: number
       size: number; phase: number; baseAlpha: number; life: number; maxLife: number
     }
-    interface Ember {
-      x: number; y: number; vx: number; vy: number
-      size: number; phase: number; baseAlpha: number; life: number; maxLife: number; hue: number
-    }
-    interface Star { x: number; y: number; size: number; phase: number }
 
-    const leafPalette =
-      effect === 'goldenfall'
-        ? ['#d98f2b', '#c96a2c', '#e0a53c', '#b0451f']
-        : effect === 'duskember'
-          ? ['#a83a2a', '#c9502f', '#8a2f22']
-          : ['#8a9a4c', '#c9a24a', '#6f7f3c', '#a98a3a'] // gale: still mostly green, just turning
+    const leafCfg = effect === 'goldenfall' || effect === 'duskember' ? LEAF_CONFIG[effect] : null
+
+    // Load the actual photo as a drawImage source, so leaf sprites can be
+    // cropped directly from its real canopy pixels once it's ready.
+    let sourceImg: HTMLImageElement | null = null
+    let imgReady = false
+    if (leafCfg) {
+      sourceImg = new Image()
+      sourceImg.onload = () => { imgReady = true }
+      sourceImg.src = imageSrc
+    }
 
     const drops: Drop[] = []
+    const flakes: Flake[] = []
     const leaves: Leaf[] = []
     const motes: Mote[] = []
-    const embers: Ember[] = []
-    const stars: Star[] = []
 
     function spawnDrop(): Drop {
       return {
@@ -85,19 +159,52 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
       }
     }
 
-    function spawnLeaf(fromLeft: boolean): Leaf {
+    function spawnFlake(): Flake {
       return {
-        x: fromLeft ? -30 : Math.random() * W,
-        y: fromLeft ? Math.random() * H : -30 - Math.random() * H * 0.6,
-        vx: fromLeft ? 1.4 + Math.random() * 1.8 : (Math.random() - 0.5) * 0.5,
-        vy: fromLeft ? (Math.random() - 0.5) * 0.5 : 0.5 + Math.random() * 0.7,
-        size: 5 + Math.random() * 6,
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vy: 0.7 + Math.random() * 1.3,
+        size: 1.8 + Math.random() * 3.2,
+        alpha: 0.45 + Math.random() * 0.45,
+        swayPhase: Math.random() * Math.PI * 2,
+        swayAmp: 0.4 + Math.random() * 1.3,
+        swayFreq: 0.015 + Math.random() * 0.025,
+      }
+    }
+
+    // Crops a small leaf-shaped patch straight out of the tree canopy in
+    // the actual photo, launched off the canopy at a real ballistic angle.
+    function spawnLeaf(): Leaf {
+      const cfg = leafCfg!
+      const x = W * (0.38 + Math.random() * 0.24)
+      const y = H * (0.16 + Math.random() * 0.34)
+      const angleDeg = cfg.angleMin + Math.random() * (cfg.angleMax - cfg.angleMin)
+      const angleRad = (angleDeg * Math.PI) / 180
+      const speed = cfg.speedMin + Math.random() * (cfg.speedMax - cfg.speedMin)
+
+      const natW = sourceImg?.naturalWidth || 1376
+      const natH = sourceImg?.naturalHeight || 774
+      const cropW = natW * (0.012 + Math.random() * 0.01)
+      const cropH = cropW * (0.65 + Math.random() * 0.3)
+      const rangeW = natW * (CANOPY_RECT.xMax - CANOPY_RECT.xMin) - cropW
+      const rangeH = natH * (CANOPY_RECT.yMax - CANOPY_RECT.yMin) - cropH
+      const cropSX = natW * CANOPY_RECT.xMin + Math.random() * Math.max(rangeW, 1)
+      const cropSY = natH * CANOPY_RECT.yMin + Math.random() * Math.max(rangeH, 1)
+
+      return {
+        x,
+        y,
+        vx: Math.cos(angleRad) * speed,
+        vy: Math.sin(angleRad) * speed,
+        size: 7 + Math.random() * 6,
         rot: Math.random() * 360,
-        vr: (Math.random() - 0.5) * 4,
-        sway: 0.6 + Math.random() * 0.8,
-        phase: Math.random() * Math.PI * 2,
-        color: leafPalette[Math.floor(Math.random() * leafPalette.length)],
-        alpha: 0.55 + Math.random() * 0.35,
+        vr: (Math.random() - 0.5) * 3,
+        flutterPhase: Math.random() * Math.PI * 2,
+        cropSX,
+        cropSY,
+        cropW,
+        cropH,
+        alpha: 0.85 + Math.random() * 0.15,
       }
     }
 
@@ -115,34 +222,11 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
       }
     }
 
-    function spawnEmber(): Ember {
-      return {
-        x: Math.random() * W,
-        y: H + Math.random() * 60,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: -0.3 - Math.random() * 0.5,
-        size: 1.2 + Math.random() * 2.4,
-        phase: Math.random() * Math.PI * 2,
-        baseAlpha: 0.3 + Math.random() * 0.5,
-        life: 0,
-        maxLife: 300 + Math.random() * 400,
-        hue: 18 + Math.random() * 20,
-      }
-    }
-
-    function spawnStar(): Star {
-      return { x: Math.random() * W, y: Math.random() * H * 0.55, size: 0.6 + Math.random() * 1.2, phase: Math.random() * Math.PI * 2 }
-    }
-
     if (effect === 'downpour') for (let i = 0; i < 180; i++) drops.push(spawnDrop())
-    if (effect === 'gale') for (let i = 0; i < 22; i++) leaves.push(spawnLeaf(true))
-    if (effect === 'goldenfall') for (let i = 0; i < 34; i++) leaves.push(spawnLeaf(false))
+    if (effect === 'snowfall') for (let i = 0; i < 220; i++) flakes.push(spawnFlake())
     if (effect === 'bloom' || effect === 'pollen') for (let i = 0; i < 30; i++) motes.push(spawnMote())
-    if (effect === 'duskember') {
-      for (let i = 0; i < 26; i++) embers.push(spawnEmber())
-      for (let i = 0; i < 40; i++) stars.push(spawnStar())
-      for (let i = 0; i < 8; i++) leaves.push(spawnLeaf(false))
-    }
+    // Leaves are filled in lazily inside tick() once the source photo has
+    // loaded, so crop coordinates are based on its real natural size.
 
     let raf = 0
     let t = 0
@@ -151,48 +235,46 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
 
     function tick() {
       t += 1
-      ctx!.clearRect(0, 0, W, H)
+      gctx!.clearRect(0, 0, W, H)
+      sctx!.clearRect(0, 0, W, H)
 
-      // rain
+      // --- glow layer: rain ---
       if (drops.length) {
-        ctx!.strokeStyle = 'rgba(210,225,255,1)'
-        ctx!.lineCap = 'round'
-        ctx!.lineWidth = 1
+        gctx!.strokeStyle = 'rgba(210,225,255,1)'
+        gctx!.lineCap = 'round'
+        gctx!.lineWidth = 1
         for (const d of drops) {
           d.y += d.vy
           if (d.y > H) { d.y = -20; d.x = Math.random() * W }
-          ctx!.globalAlpha = d.alpha
-          ctx!.beginPath()
-          ctx!.moveTo(d.x, d.y)
-          ctx!.lineTo(d.x - 3, d.y + d.len)
-          ctx!.stroke()
+          gctx!.globalAlpha = d.alpha
+          gctx!.beginPath()
+          gctx!.moveTo(d.x, d.y)
+          gctx!.lineTo(d.x - 3, d.y + d.len)
+          gctx!.stroke()
         }
-        ctx!.globalAlpha = 1
+        gctx!.globalAlpha = 1
       }
 
-      // leaves
-      for (const l of leaves) {
-        l.phase += 0.02
-        l.x += l.vx + Math.sin(l.phase) * l.sway * (effect === 'gale' ? 0.3 : 0.15)
-        l.y += l.vy
-        l.rot += l.vr
+      // --- glow layer: real snow ---
+      for (const f of flakes) {
+        f.y += f.vy
+        const sway = Math.sin(t * f.swayFreq + f.swayPhase) * f.swayAmp
+        f.x += sway * 0.06 + 0.05
+        if (f.y > H + 10) { f.y = -10; f.x = Math.random() * W }
+        if (f.x > W + 10) f.x = -10
+        if (f.x < -10) f.x = W + 10
 
-        if (effect === 'gale' && l.x > W + 30) Object.assign(l, spawnLeaf(true))
-        if (effect !== 'gale' && l.y > H + 30) Object.assign(l, spawnLeaf(false))
-
-        ctx!.save()
-        ctx!.translate(l.x, l.y)
-        ctx!.rotate((l.rot * Math.PI) / 180)
-        ctx!.globalAlpha = l.alpha
-        ctx!.fillStyle = l.color
-        ctx!.beginPath()
-        ctx!.ellipse(0, 0, l.size, l.size * 0.55, 0, 0, Math.PI * 2)
-        ctx!.fill()
-        ctx!.restore()
+        const r = f.size * 2.2
+        const grad = gctx!.createRadialGradient(f.x, f.y, 0, f.x, f.y, r)
+        grad.addColorStop(0, `rgba(255,255,255,${f.alpha})`)
+        grad.addColorStop(1, 'rgba(255,255,255,0)')
+        gctx!.beginPath()
+        gctx!.fillStyle = grad
+        gctx!.arc(f.x, f.y, r, 0, Math.PI * 2)
+        gctx!.fill()
       }
-      ctx!.globalAlpha = 1
 
-      // motes (light dust / pollen)
+      // --- glow layer: dust / pollen motes ---
       for (const m of motes) {
         m.life += 1
         if (m.life > m.maxLife) Object.assign(m, spawnMote(), { life: 0 })
@@ -210,57 +292,73 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
 
         if (a < 0.01) continue
         const r = m.size * 4
-        const grad = ctx!.createRadialGradient(m.x, m.y, 0, m.x, m.y, r)
+        const grad = gctx!.createRadialGradient(m.x, m.y, 0, m.x, m.y, r)
         grad.addColorStop(0, `rgba(255, 248, 225, ${a})`)
         grad.addColorStop(1, 'rgba(255, 248, 225, 0)')
-        ctx!.beginPath()
-        ctx!.fillStyle = grad
-        ctx!.arc(m.x, m.y, r, 0, Math.PI * 2)
-        ctx!.fill()
+        gctx!.beginPath()
+        gctx!.fillStyle = grad
+        gctx!.arc(m.x, m.y, r, 0, Math.PI * 2)
+        gctx!.fill()
       }
 
-      // stars (dusk only)
-      for (const s of stars) {
-        const a = Math.max(0, 0.35 + 0.35 * Math.sin(t * 0.02 + s.phase))
-        ctx!.beginPath()
-        ctx!.fillStyle = `rgba(255,255,255,${a})`
-        ctx!.arc(s.x, s.y, s.size, 0, Math.PI * 2)
-        ctx!.fill()
+      // --- solid layer: photo-sampled leaf sprites ---
+      if (leafCfg && imgReady && sourceImg) {
+        while (leaves.length < leafCfg.count) leaves.push(spawnLeaf())
+
+        for (const l of leaves) {
+          l.vx *= leafCfg.drag
+          l.vy = (l.vy + leafCfg.gravity) * leafCfg.drag
+          l.flutterPhase += leafCfg.flutterFreq
+          const flutterX = Math.sin(l.flutterPhase) * leafCfg.flutterAmp * 0.25
+          const flutterY = Math.cos(l.flutterPhase * 0.8) * leafCfg.flutterAmp * 0.15
+          l.x += l.vx + flutterX
+          l.y += l.vy + flutterY
+
+          const speedMag = Math.hypot(l.vx, l.vy)
+          l.rot += l.vr + speedMag * leafCfg.spinBase
+
+          const offscreen = l.x < -60 || l.x > W + 60 || l.y > H + 60
+          const settled = speedMag < 0.05 && l.y > H * 0.85
+          if (offscreen || settled) Object.assign(l, spawnLeaf())
+
+          sctx!.save()
+          sctx!.translate(l.x, l.y)
+          sctx!.rotate((l.rot * Math.PI) / 180)
+          sctx!.globalAlpha = l.alpha
+          sctx!.beginPath()
+          sctx!.ellipse(0, 0, l.size, l.size * 0.62, 0, 0, Math.PI * 2)
+          sctx!.clip()
+          sctx!.drawImage(
+            sourceImg,
+            l.cropSX, l.cropSY, l.cropW, l.cropH,
+            -l.size, -l.size * 0.62, l.size * 2, l.size * 1.24,
+          )
+          sctx!.restore()
+
+          // faint outline so the sprite reads as a leaf silhouette, not a raw texture patch
+          sctx!.save()
+          sctx!.translate(l.x, l.y)
+          sctx!.rotate((l.rot * Math.PI) / 180)
+          sctx!.globalAlpha = l.alpha * 0.6
+          sctx!.strokeStyle = 'rgba(15, 10, 5, 0.3)'
+          sctx!.lineWidth = 1
+          sctx!.beginPath()
+          sctx!.ellipse(0, 0, l.size, l.size * 0.62, 0, 0, Math.PI * 2)
+          sctx!.stroke()
+          sctx!.restore()
+        }
       }
+      sctx!.globalAlpha = 1
 
-      // embers (dusk only)
-      for (const e of embers) {
-        e.life += 1
-        if (e.life > e.maxLife) Object.assign(e, spawnEmber(), { life: 0 })
-        const lt = e.life / e.maxLife
-        const fadeIn = Math.min(lt / 0.2, 1)
-        const fadeOut = Math.min((1 - lt) / 0.3, 1)
-        const flicker = 0.7 + 0.3 * Math.sin(e.life * 0.15 + e.phase)
-        const a = fadeIn * fadeOut * e.baseAlpha * flicker
-
-        e.x += e.vx + Math.sin(e.life * 0.03 + e.phase) * 0.15
-        e.y += e.vy
-
-        if (a < 0.01) continue
-        const r = e.size * 3.2
-        const grad = ctx!.createRadialGradient(e.x, e.y, 0, e.x, e.y, r)
-        grad.addColorStop(0, `hsla(${e.hue}, 90%, 62%, ${a})`)
-        grad.addColorStop(1, `hsla(${e.hue}, 90%, 55%, 0)`)
-        ctx!.beginPath()
-        ctx!.fillStyle = grad
-        ctx!.arc(e.x, e.y, r, 0, Math.PI * 2)
-        ctx!.fill()
-      }
-
-      // distant lightning for the two stormy years
-      if (effect === 'gale' || effect === 'downpour') {
+      // --- lightning only for actual rain/storm ---
+      if (effect === 'downpour') {
         if (t > nextFlashAt) {
-          flash = effect === 'downpour' ? 0.28 : 0.16
+          flash = 0.28
           nextFlashAt = t + 240 + Math.random() * 300
         }
         if (flash > 0) {
-          ctx!.fillStyle = `rgba(225,235,255,${flash})`
-          ctx!.fillRect(0, 0, W, H)
+          gctx!.fillStyle = `rgba(225,235,255,${flash})`
+          gctx!.fillRect(0, 0, W, H)
           flash -= 0.015
         }
       }
@@ -273,11 +371,12 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', resize)
     }
-  }, [effect])
+  }, [effect, imageSrc])
 
   return (
     <>
-      <canvas ref={canvasRef} className={styles.canvas} />
+      <canvas ref={glowRef} className={styles.glowCanvas} />
+      <canvas ref={solidRef} className={styles.solidCanvas} />
       <div className={`${styles.mood} ${styles[effect]}`} />
     </>
   )
