@@ -11,12 +11,39 @@
   z-index: 1000;
 }
 
+/* Wraps the photo + seasonal effects (rain/snow/leaves canvases) so the
+   blur is applied to the whole scene together, not just the photo. */
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(2px) saturate(1.03);
+  /* Scaled up slightly so the blur samples pull from outside the visible
+     frame - without this, blurred edges look washed out/lighter than the
+     center, which is the tell that gives away a cheap CSS blur. */
+  transform: scale(1.015);
+  will-change: filter;
+}
+
 .photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
   display: block;
+}
+
+/* Very light vignette so it still reads as a soft "frosted" scene rather
+   than a flat sharp one. Sits above the blurred scene but below the back
+   button. */
+.root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.08) 100%);
 }
 
 .backBtn {
