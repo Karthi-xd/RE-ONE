@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import styles from './SeasonalOverlay.module.css'
+import duskemberLeaf from '../assets/leaves/maple-leaf.png'
 
 // Each year gets its own weather, matched to what's actually happening
 // in that year's photo:
@@ -8,14 +9,14 @@ import styles from './SeasonalOverlay.module.css'
 //   2017 - actual snowfall             -> real snow particles, gentle sway
 //   2018 - rain actually falling       -> streaking rain + thunder flash
 //   2019 - full gold autumn            -> leaves drifting gently down, whole scene
-//   2020 - dusk, deep red leaves       -> a few leaves drifting gently down
+//   2020 - dusk, deep red leaves       -> a few real maple-leaf images sifting down
 //
-// Leaves are drawn shapes (a pointed leaf silhouette with a soft gradient
-// fill), not cropped from the photo - that approach kept landing on sky/
-// haze between branches and looked worse the more it was tuned. They spawn
-// spread across the whole width above the frame and drift straight down
-// with a gentle sway, like ambient falling leaves, rather than launching
-// from a single point in the canopy (which read as leaves being "thrown").
+// 2019 leaves are a drawn shape (a pointed leaf silhouette with a soft
+// gradient fill) - unchanged, kept exactly as before.
+// 2020 leaves are real PNG artwork (an actual maple-leaf illustration,
+// recolored per palette) drawn with drawImage, not a shape built from
+// code - a coded approximation kept not reading as a real maple leaf no
+// matter how it was tuned, so this uses real leaf art instead.
 //
 // Rendering is split across two stacked canvases:
 //   - glowCanvas (mix-blend-mode: screen) is for soft LIGHT: dust motes,
@@ -79,8 +80,8 @@ const LEAF_STYLE: Record<
     swayAmpMax: 0.9,
     swayFreqMin: 0.01,
     swayFreqMax: 0.02,
-    sizeMin: 6,
-    sizeMax: 10,
+    sizeMin: 9,
+    sizeMax: 15,
     spin: 0.5,
     drift: 0.02,
   },
@@ -217,8 +218,17 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
     if (effect === 'bloom' || effect === 'pollen') for (let i = 0; i < 30; i++) motes.push(spawnMote())
     if (leafStyle) for (let i = 0; i < leafStyle.count; i++) leaves.push(spawnLeaf(true))
 
-    // Pointed leaf silhouette (not an oval), centered at the origin,
-    // pointing along the x-axis. bulge/lengthRatio vary per leaf.
+    // Real maple-leaf artwork (2020 only) - a single image, tinted per-leaf
+    // via canvas compositing so one file covers the whole color palette
+    // instead of shipping a near-duplicate PNG per color. 2019 keeps using
+    // leafPath below, untouched.
+    const duskemberImg = new Image()
+    duskemberImg.src = duskemberLeaf
+    // Real image is ~357x382 (w:h ratio); used to size drawImage so the
+    // art isn't stretched off its natural proportions.
+    const LEAF_IMG_ASPECT = 357 / 382
+
+    // Original pointed-oval silhouette - unchanged, still used for 2019.
     function leafPath(ctx: CanvasRenderingContext2D, len: number, width: number, bulge: number) {
       ctx.beginPath()
       ctx.moveTo(-len, 0)
@@ -300,8 +310,9 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
         gctx!.fill()
       }
 
-      // --- solid layer: drawn leaves, gentle fall + sway, gradient fill ---
+      // --- solid layer: drawn leaves, gentle fall + sway ---
       if (leafStyle) {
+        const isMaple = leafEffect === 'duskember'
         for (const l of leaves) {
           l.swayPhase += l.swayFreq
           l.x += Math.sin(l.swayPhase) * l.swayAmp * 0.05 + leafStyle.drift
@@ -310,6 +321,39 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
 
           if (l.y > H + 30 || l.x < -60 || l.x > W + 60) Object.assign(l, spawnLeaf(false))
 
+          if (isMaple) {
+            // Real maple-leaf artwork, drawn as an image and tinted per
+            // leaf (source-atop over its own alpha) so the one file still
+            // gives the palette's color variety - not a shape, not 4 near-
+            // identical files.
+            if (duskemberImg.complete && duskemberImg.naturalWidth > 0) {
+              const dh = l.size * 2.1 * l.lengthRatio
+              const dw = dh * LEAF_IMG_ASPECT * l.bulge
+              sctx!.save()
+              sctx!.translate(l.x + 2, l.y + 3)
+              sctx!.rotate((l.rot * Math.PI) / 180)
+              sctx!.globalAlpha = l.alpha * 0.3
+              sctx!.filter = 'brightness(0) blur(1.5px)'
+              sctx!.drawImage(duskemberImg, -dw / 2, -dh / 2, dw, dh)
+              sctx!.restore()
+
+              sctx!.save()
+              sctx!.translate(l.x, l.y)
+              sctx!.rotate((l.rot * Math.PI) / 180)
+              sctx!.filter = 'none'
+              sctx!.globalAlpha = l.alpha
+              sctx!.drawImage(duskemberImg, -dw / 2, -dh / 2, dw, dh)
+              sctx!.globalCompositeOperation = 'source-atop'
+              sctx!.globalAlpha = l.alpha * 0.55
+              sctx!.fillStyle = l.color
+              sctx!.fillRect(-dw / 2, -dh / 2, dw, dh)
+              sctx!.globalCompositeOperation = 'source-over'
+              sctx!.restore()
+            }
+            continue
+          }
+
+          // --- 2019 (goldenfall): original drawn shape, unchanged ---
           const len = l.size * l.lengthRatio
           const width = l.size * 0.6
 
@@ -344,6 +388,7 @@ export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
           sctx!.stroke()
           // outline for definition
           sctx!.globalAlpha = l.alpha * 0.5
+          sctx!.strokeStyle = shade(l.color, -45)
           sctx!.lineWidth = 0.8
           leafPath(sctx!, len, width, l.bulge)
           sctx!.stroke()
