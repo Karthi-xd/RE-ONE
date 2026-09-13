@@ -7,21 +7,21 @@ import styles from './SeasonalOverlay.module.css'
 //   2016 - same meadow, different mood -> drifting pollen/seed fluff
 //   2017 - actual snowfall             -> real snow particles, gentle sway
 //   2018 - rain actually falling       -> streaking rain + thunder flash
-//   2019 - full gold autumn, big gust  -> leaves cut from the real photo, falling
-//   2020 - dusk, deep red leaves       -> leaves cut from the real photo, falling
+//   2019 - full gold autumn            -> leaves drifting gently down, whole scene
+//   2020 - dusk, deep red leaves       -> a few leaves drifting gently down
 //
-// For 2019/2020 the falling leaves are literal crops of the photo's own
-// canopy pixels. A naive random crop from the canopy area regularly grabs
-// sky peeking through gaps in the branches (bright, low-saturation grey),
-// so every candidate crop is color-checked against real samples taken from
-// each photo before being accepted - see isLeafySample().
+// Leaves are drawn shapes (a pointed leaf silhouette with a soft gradient
+// fill), not cropped from the photo - that approach kept landing on sky/
+// haze between branches and looked worse the more it was tuned. They spawn
+// spread across the whole width above the frame and drift straight down
+// with a gentle sway, like ambient falling leaves, rather than launching
+// from a single point in the canopy (which read as leaves being "thrown").
 //
 // Rendering is split across two stacked canvases:
 //   - glowCanvas (mix-blend-mode: screen) is for soft LIGHT: dust motes,
 //     rain streaks, snow.
-//   - solidCanvas (normal blending) is for OBJECTS with real texture:
-//     the photo-sampled leaf sprites, which need their own dark shadow and
-//     can't rely on screen blend (that only ever lightens).
+//   - solidCanvas (normal blending) is for the leaves, which need real
+//     color and their own soft shadow.
 type EffectId = 'bloom' | 'pollen' | 'snowfall' | 'downpour' | 'goldenfall' | 'duskember'
 type LeafEffect = 'goldenfall' | 'duskember'
 
@@ -34,86 +34,71 @@ const YEAR_EFFECT: Record<string, EffectId> = {
   '2020': 'duskember',
 }
 
-// Leaves are simulated as real projectiles: a burst velocity off the tree,
-// then every frame gravity pulls them down and drag slows them, so they
-// naturally arc, decelerate, and tumble.
-// Angle convention: 0deg = rightward, negative = upward (canvas y is down).
-const LEAF_CONFIG: Record<
+const LEAF_STYLE: Record<
   LeafEffect,
   {
-    angleMin: number
-    angleMax: number
-    speedMin: number
-    speedMax: number
-    drag: number
-    gravity: number
-    flutterAmp: number
-    flutterFreq: number
-    spinBase: number
+    colors: string[]
+    highlights: string[]
     count: number
+    fallSpeedMin: number
+    fallSpeedMax: number
+    swayAmpMin: number
+    swayAmpMax: number
+    swayFreqMin: number
+    swayFreqMax: number
+    sizeMin: number
+    sizeMax: number
+    spin: number
+    drift: number // slight steady horizontal wind
   }
 > = {
-  // 2019: a real gust tears leaves up and off the canopy, they arc over, then fall
+  // 2019: vivid, plentiful autumn leaves drifting down across the whole scene
   goldenfall: {
-    angleMin: -78,
-    angleMax: -34,
-    speedMin: 3.2,
-    speedMax: 6.2,
-    drag: 0.965,
-    gravity: 0.05,
-    flutterAmp: 1.0,
-    flutterFreq: 0.045,
-    spinBase: 0.22,
+    colors: ['#c96a2c', '#e0a53c', '#b8451f', '#d9832f'],
+    highlights: ['#f0b563', '#ffd28a', '#e08a4f', '#f5c377'],
     count: 26,
+    fallSpeedMin: 0.5,
+    fallSpeedMax: 1.3,
+    swayAmpMin: 0.6,
+    swayAmpMax: 1.7,
+    swayFreqMin: 0.014,
+    swayFreqMax: 0.03,
+    sizeMin: 6,
+    sizeMax: 11,
+    spin: 1.1,
+    drift: 0.12,
   },
-  // 2020: still dusk air, just a few leaves gently sifting down
+  // 2020: still dusk air, just a handful of dark leaves sifting down calmly
   duskember: {
-    angleMin: -50,
-    angleMax: 8,
-    speedMin: 1.0,
-    speedMax: 2.2,
-    drag: 0.975,
-    gravity: 0.032,
-    flutterAmp: 0.75,
-    flutterFreq: 0.04,
-    spinBase: 0.14,
+    colors: ['#5c1810', '#7a2015', '#3d0f0a', '#6b2317'],
+    highlights: ['#a8402a', '#c9502f', '#8f3320', '#b8462d'],
     count: 9,
+    fallSpeedMin: 0.25,
+    fallSpeedMax: 0.6,
+    swayAmpMin: 0.3,
+    swayAmpMax: 0.9,
+    swayFreqMin: 0.01,
+    swayFreqMax: 0.02,
+    sizeMin: 6,
+    sizeMax: 10,
+    spin: 0.5,
+    drift: 0.02,
   },
 }
 
-// Where leaf crops are drawn from, as a fraction of the photo's natural
-// size - centered on the densest part of the canopy. Even within this box
-// some patches are still sky/haze (gaps between branches), which is why
-// isLeafySample() double-checks every candidate before it's used.
-const CANOPY_RECT = { xMin: 0.36, xMax: 0.64, yMin: 0.24, yMax: 0.58 }
-
-// Verified against real pixel samples pulled from both photos:
-// - 2019's sky/haze patches read as bright AND low-warmth (close to grey) -
-//   e.g. (208,209,196) - while genuine leaf pixels, even sunlit highlights,
-//   are reliably warm (R well above B) regardless of brightness. A separate
-//   cap catches blown-out highlights that are technically "warm" by the
-//   numbers but too washed-out to read as leaf color.
-// - 2020's sky is a warm dusk orange, so warmth alone can't tell it apart
-//   from a leaf - checked directly against real sky-gap pixels there
-//   (lum 163, warmth 160) vs real leaf pixels (lum <=144). Luminance alone
-//   is the reliable signal for this photo: leaves sit reliably darker than
-//   the bright sky behind them.
-function isSkyPixel(effect: LeafEffect, r: number, g: number, b: number): boolean {
-  const lum = 0.299 * r + 0.587 * g + 0.114 * b
-  if (effect === 'goldenfall') {
-    if (lum > 222) return true // blown-out highlight, unusable regardless of hue
-    const warmth = r - b
-    return lum > 175 && warmth < 40
-  }
-  return lum > 150 // duskember
+function shade(hex: string, amt: number): string {
+  const h = hex.replace('#', '')
+  const r = Math.max(0, Math.min(255, parseInt(h.substring(0, 2), 16) + amt))
+  const g = Math.max(0, Math.min(255, parseInt(h.substring(2, 4), 16) + amt))
+  const b = Math.max(0, Math.min(255, parseInt(h.substring(4, 6), 16) + amt))
+  return `rgb(${r}, ${g}, ${b})`
 }
 
 interface SeasonalOverlayProps {
   year: string
-  imageSrc: string
 }
 
-export default function SeasonalOverlay({ year, imageSrc }: SeasonalOverlayProps) {
+export default function SeasonalOverlay({ year }: SeasonalOverlayProps) {
   const glowRef = useRef<HTMLCanvasElement>(null)
   const solidRef = useRef<HTMLCanvasElement>(null)
   const effect = YEAR_EFFECT[year] ?? 'bloom'
@@ -147,11 +132,11 @@ export default function SeasonalOverlay({ year, imageSrc }: SeasonalOverlayProps
       swayPhase: number; swayAmp: number; swayFreq: number
     }
     interface Leaf {
-      x: number; y: number; vx: number; vy: number
-      size: number; rot: number; vr: number; flutterPhase: number
-      lengthRatio: number; bulge: number // shape variance so leaves aren't identical
-      cropSX: number; cropSY: number; cropW: number; cropH: number
-      alpha: number
+      x: number; y: number; vy: number
+      size: number; rot: number; vr: number
+      swayPhase: number; swayAmp: number; swayFreq: number
+      bulge: number; lengthRatio: number
+      color: string; highlight: string; alpha: number
     }
     interface Mote {
       x: number; y: number; vx: number; vy: number
@@ -159,27 +144,7 @@ export default function SeasonalOverlay({ year, imageSrc }: SeasonalOverlayProps
     }
 
     const leafEffect: LeafEffect | null = effect === 'goldenfall' || effect === 'duskember' ? effect : null
-    const leafCfg = leafEffect ? LEAF_CONFIG[leafEffect] : null
-
-    // Load the actual photo, then draw it once into an offscreen canvas at
-    // full resolution so individual crop candidates can be pixel-sampled
-    // and validated before being used as a leaf sprite.
-    let sourceImg: HTMLImageElement | null = null
-    let offscreen: HTMLCanvasElement | null = null
-    let offCtx: CanvasRenderingContext2D | null = null
-    let imgReady = false
-    if (leafCfg) {
-      sourceImg = new Image()
-      sourceImg.onload = () => {
-        offscreen = document.createElement('canvas')
-        offscreen.width = sourceImg!.naturalWidth
-        offscreen.height = sourceImg!.naturalHeight
-        offCtx = offscreen.getContext('2d')
-        offCtx?.drawImage(sourceImg!, 0, 0)
-        imgReady = true
-      }
-      sourceImg.src = imageSrc
-    }
+    const leafStyle = leafEffect ? LEAF_STYLE[leafEffect] : null
 
     const drops: Drop[] = []
     const flakes: Flake[] = []
@@ -209,66 +174,27 @@ export default function SeasonalOverlay({ year, imageSrc }: SeasonalOverlayProps
       }
     }
 
-    // Finds a genuinely leaf-colored crop rectangle within the canopy zone.
-    // Checking only the average color of a candidate patch lets boundary
-    // crops slip through (half leaf, half sky averages out to something
-    // that looks "warm enough" but renders as a two-toned mess), so this
-    // checks what fraction of individual pixels are sky-like and rejects
-    // the whole patch if too many are.
-    function findLeafCrop(cropW: number, cropH: number): { sx: number; sy: number } {
-      const natW = offscreen!.width
-      const natH = offscreen!.height
-      const rangeW = Math.max(natW * (CANOPY_RECT.xMax - CANOPY_RECT.xMin) - cropW, 1)
-      const rangeH = Math.max(natH * (CANOPY_RECT.yMax - CANOPY_RECT.yMin) - cropH, 1)
-      const baseX = natW * CANOPY_RECT.xMin
-      const baseY = natH * CANOPY_RECT.yMin
-
-      let best = { sx: baseX, sy: baseY, score: Infinity }
-      for (let attempt = 0; attempt < 28; attempt++) {
-        const sx = baseX + Math.random() * rangeW
-        const sy = baseY + Math.random() * rangeH
-        const data = offCtx!.getImageData(sx, sy, Math.max(cropW, 1), Math.max(cropH, 1)).data
-        let skyCount = 0
-        const n = data.length / 4
-        for (let i = 0; i < data.length; i += 4) {
-          if (isSkyPixel(leafEffect!, data[i], data[i + 1], data[i + 2])) skyCount++
-        }
-        const skyFrac = skyCount / n
-        if (skyFrac <= 0.1) return { sx, sy }
-        if (skyFrac < best.score) best = { sx, sy, score: skyFrac }
-      }
-      return { sx: best.sx, sy: best.sy }
-    }
-
-    function spawnLeaf(): Leaf {
-      const cfg = leafCfg!
-      const x = W * (0.38 + Math.random() * 0.24)
-      const y = H * (0.16 + Math.random() * 0.34)
-      const angleDeg = cfg.angleMin + Math.random() * (cfg.angleMax - cfg.angleMin)
-      const angleRad = (angleDeg * Math.PI) / 180
-      const speed = cfg.speedMin + Math.random() * (cfg.speedMax - cfg.speedMin)
-
-      const natW = offscreen!.width
-      const cropW = natW * (0.014 + Math.random() * 0.012)
-      const cropH = cropW * (0.65 + Math.random() * 0.3)
-      const { sx, sy } = findLeafCrop(cropW, cropH)
-
+    // Spread across the whole width, staggered well above and within the
+    // frame so they don't all pop in at once - ambient falling leaves, not
+    // a burst from a single point.
+    function spawnLeaf(initial: boolean): Leaf {
+      const s = leafStyle!
+      const idx = Math.floor(Math.random() * s.colors.length)
       return {
-        x,
-        y,
-        vx: Math.cos(angleRad) * speed,
-        vy: Math.sin(angleRad) * speed,
-        size: 7 + Math.random() * 6,
+        x: Math.random() * W,
+        y: initial ? Math.random() * H - H * 0.3 : -30 - Math.random() * 40,
+        vy: s.fallSpeedMin + Math.random() * (s.fallSpeedMax - s.fallSpeedMin),
+        size: s.sizeMin + Math.random() * (s.sizeMax - s.sizeMin),
         rot: Math.random() * 360,
-        vr: (Math.random() - 0.5) * 3,
-        flutterPhase: Math.random() * Math.PI * 2,
-        lengthRatio: 0.85 + Math.random() * 0.3,
+        vr: (Math.random() - 0.5) * s.spin,
+        swayPhase: Math.random() * Math.PI * 2,
+        swayAmp: s.swayAmpMin + Math.random() * (s.swayAmpMax - s.swayAmpMin),
+        swayFreq: s.swayFreqMin + Math.random() * (s.swayFreqMax - s.swayFreqMin),
         bulge: 0.85 + Math.random() * 0.35,
-        cropSX: sx,
-        cropSY: sy,
-        cropW,
-        cropH,
-        alpha: 0.85 + Math.random() * 0.15,
+        lengthRatio: 0.85 + Math.random() * 0.3,
+        color: s.colors[idx],
+        highlight: s.highlights[idx],
+        alpha: 0.75 + Math.random() * 0.25,
       }
     }
 
@@ -289,11 +215,10 @@ export default function SeasonalOverlay({ year, imageSrc }: SeasonalOverlayProps
     if (effect === 'downpour') for (let i = 0; i < 180; i++) drops.push(spawnDrop())
     if (effect === 'snowfall') for (let i = 0; i < 220; i++) flakes.push(spawnFlake())
     if (effect === 'bloom' || effect === 'pollen') for (let i = 0; i < 30; i++) motes.push(spawnMote())
-    // Leaves fill in lazily inside tick() once the offscreen sample canvas is ready.
+    if (leafStyle) for (let i = 0; i < leafStyle.count; i++) leaves.push(spawnLeaf(true))
 
-    // Draws a pointed leaf silhouette (not an oval) centered at the origin,
-    // pointing along the x-axis. bulge/lengthRatio vary per leaf so they
-    // aren't all identical.
+    // Pointed leaf silhouette (not an oval), centered at the origin,
+    // pointing along the x-axis. bulge/lengthRatio vary per leaf.
     function leafPath(ctx: CanvasRenderingContext2D, len: number, width: number, bulge: number) {
       ctx.beginPath()
       ctx.moveTo(-len, 0)
@@ -375,67 +300,50 @@ export default function SeasonalOverlay({ year, imageSrc }: SeasonalOverlayProps
         gctx!.fill()
       }
 
-      // --- solid layer: photo-sampled leaf sprites ---
-      if (leafCfg && imgReady && sourceImg && offCtx) {
-        while (leaves.length < leafCfg.count) leaves.push(spawnLeaf())
-
+      // --- solid layer: drawn leaves, gentle fall + sway, gradient fill ---
+      if (leafStyle) {
         for (const l of leaves) {
-          l.vx *= leafCfg.drag
-          l.vy = (l.vy + leafCfg.gravity) * leafCfg.drag
-          l.flutterPhase += leafCfg.flutterFreq
-          const flutterX = Math.sin(l.flutterPhase) * leafCfg.flutterAmp * 0.25
-          const flutterY = Math.cos(l.flutterPhase * 0.8) * leafCfg.flutterAmp * 0.15
-          l.x += l.vx + flutterX
-          l.y += l.vy + flutterY
+          l.swayPhase += l.swayFreq
+          l.x += Math.sin(l.swayPhase) * l.swayAmp * 0.05 + leafStyle.drift
+          l.y += l.vy
+          l.rot += l.vr + Math.cos(l.swayPhase) * 0.4
 
-          const speedMag = Math.hypot(l.vx, l.vy)
-          l.rot += l.vr + speedMag * leafCfg.spinBase
-
-          const offscreenPos = l.x < -60 || l.x > W + 60 || l.y > H + 60
-          const settled = speedMag < 0.05 && l.y > H * 0.85
-          if (offscreenPos || settled) Object.assign(l, spawnLeaf())
+          if (l.y > H + 30 || l.x < -60 || l.x > W + 60) Object.assign(l, spawnLeaf(false))
 
           const len = l.size * l.lengthRatio
           const width = l.size * 0.6
 
-          // soft dark shadow first, offset slightly, for depth
+          // soft shadow for depth
           sctx!.save()
           sctx!.translate(l.x + 2, l.y + 3)
           sctx!.rotate((l.rot * Math.PI) / 180)
-          sctx!.globalAlpha = l.alpha * 0.22
+          sctx!.globalAlpha = l.alpha * 0.2
           sctx!.fillStyle = 'rgba(10, 8, 5, 1)'
           leafPath(sctx!, len, width, l.bulge)
           sctx!.fill()
           sctx!.restore()
 
-          // the leaf itself: real photo texture clipped to a pointed silhouette
+          // the leaf: gradient fill for a glossy, dimensional look
           sctx!.save()
           sctx!.translate(l.x, l.y)
           sctx!.rotate((l.rot * Math.PI) / 180)
           sctx!.globalAlpha = l.alpha
           leafPath(sctx!, len, width, l.bulge)
-          sctx!.clip()
-          sctx!.drawImage(
-            sourceImg,
-            l.cropSX, l.cropSY, l.cropW, l.cropH,
-            -len, -width, len * 2, width * 2,
-          )
-          // center vein + soft edge, drawn while still clipped/transformed
-          sctx!.globalAlpha = l.alpha * 0.35
-          sctx!.strokeStyle = 'rgba(20, 12, 6, 0.5)'
+          const grad = sctx!.createRadialGradient(len * 0.2, -width * 0.3, width * 0.15, 0, 0, len * 1.2)
+          grad.addColorStop(0, l.highlight)
+          grad.addColorStop(1, l.color)
+          sctx!.fillStyle = grad
+          sctx!.fill()
+          // center vein
+          sctx!.globalAlpha = l.alpha * 0.4
+          sctx!.strokeStyle = shade(l.color, -30)
           sctx!.lineWidth = 0.75
           sctx!.beginPath()
           sctx!.moveTo(-len * 0.9, 0)
           sctx!.lineTo(len * 0.9, 0)
           sctx!.stroke()
-          sctx!.restore()
-
-          // faint outline for definition against busy backgrounds
-          sctx!.save()
-          sctx!.translate(l.x, l.y)
-          sctx!.rotate((l.rot * Math.PI) / 180)
-          sctx!.globalAlpha = l.alpha * 0.4
-          sctx!.strokeStyle = 'rgba(15, 10, 5, 0.35)'
+          // outline for definition
+          sctx!.globalAlpha = l.alpha * 0.5
           sctx!.lineWidth = 0.8
           leafPath(sctx!, len, width, l.bulge)
           sctx!.stroke()
@@ -465,7 +373,7 @@ export default function SeasonalOverlay({ year, imageSrc }: SeasonalOverlayProps
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', resize)
     }
-  }, [effect, imageSrc])
+  }, [effect])
 
   return (
     <>

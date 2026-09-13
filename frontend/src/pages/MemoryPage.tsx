@@ -29,7 +29,7 @@ export default function MemoryPage({ year, onBack }: MemoryPageProps) {
   return (
     <div className={styles.root}>
       <img src={image} alt={`A memory from ${year}`} className={styles.photo} />
-      <SeasonalOverlay year={year} imageSrc={image} />
+      <SeasonalOverlay year={year} />
       <button type="button" className={styles.backBtn} onClick={onBack}>
         ← Back
       </button>
