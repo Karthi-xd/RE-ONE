@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import styles from './MemoryPage.module.css'
 import SeasonalOverlay from './SeasonalOverlay'
 
@@ -20,14 +21,26 @@ const YEAR_IMAGES: Record<string, string> = {
 
 interface MemoryPageProps {
   year: string
+  origin?: DOMRect | null
   onBack: () => void
 }
 
-export default function MemoryPage({ year, onBack }: MemoryPageProps) {
+export default function MemoryPage({ year, origin, onBack }: MemoryPageProps) {
   const image = YEAR_IMAGES[year]
 
+  // Anchors the zoom-in animation to the exact spot the user double-clicked,
+  // so the page expands from that point instead of just cutting to a new
+  // screen. Falls back to center when we don't have a click origin (e.g. a
+  // future keyboard-only path).
+  const originStyle = origin
+    ? ({
+        '--origin-x': `${origin.left + origin.width / 2}px`,
+        '--origin-y': `${origin.top + origin.height / 2}px`,
+      } as CSSProperties)
+    : undefined
+
   return (
-    <div className={styles.root}>
+    <div className={styles.root} style={originStyle}>
       <div className={styles.scene}>
         <img src={image} alt={`A memory from ${year}`} className={styles.photo} />
         <SeasonalOverlay year={year} />

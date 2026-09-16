@@ -9,7 +9,10 @@
   justify-content: center;
   overflow: hidden;
   z-index: 1000;
-  animation: pageReveal 300ms ease-out both;
+  /* Anchors the expand animation to the exact spot that was clicked
+     (set inline via --origin-x/--origin-y), falling back to center. */
+  transform-origin: var(--origin-x, 50%) var(--origin-y, 50%);
+  animation: pageExpand 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Wraps the photo + seasonal effects (rain/snow/leaves canvases) so the
@@ -25,10 +28,9 @@
      center, which is the tell that gives away a cheap CSS blur. */
   transform: scale(1.015);
   will-change: filter, transform;
-  /* Settles from a soft, desaturated, slightly-zoomed state into the
-     resting blur - reads like a photo coming into focus rather than a
-     plain fade or slide. */
-  animation: memoryFocusIn 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Settles from a soft, slightly-zoomed state into the resting blur,
+     timed to finish just as the page-expand settles. */
+  animation: memoryFocusIn 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .photo {
@@ -65,29 +67,34 @@
   font-size: 13px;
   letter-spacing: 0.02em;
   cursor: pointer;
-  /* Waits for the scene to mostly settle before easing in, so the eye
+  /* Waits for the expand to mostly settle before easing in, so the eye
      lands on the photo first. */
   opacity: 0;
-  animation: memoryBtnFadeIn 450ms ease-out 500ms both;
+  animation: memoryBtnFadeIn 400ms ease-out 380ms both;
 }
 
 .backBtn:hover {
   background: rgba(0, 0, 0, 0.75);
 }
 
-@keyframes pageReveal {
+@keyframes pageExpand {
   from {
     opacity: 0;
+    transform: scale(0.04);
+  }
+  55% {
+    opacity: 1;
   }
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
 @keyframes memoryFocusIn {
   from {
-    filter: blur(18px) saturate(0.4) brightness(0.85);
-    transform: scale(1.06);
+    filter: blur(10px) saturate(0.55) brightness(0.9);
+    transform: scale(1.05);
   }
   to {
     filter: blur(2px) saturate(1.03) brightness(1);
