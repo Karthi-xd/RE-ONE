@@ -64,7 +64,7 @@ function formatClock(d: Date) {
 }
 
 interface DesktopProps {
-  onOpenMemory: (year: string) => void
+  onOpenMemory: (year: string, origin?: DOMRect) => void
 }
 
 export default function Desktop({ onOpenMemory }: DesktopProps) {

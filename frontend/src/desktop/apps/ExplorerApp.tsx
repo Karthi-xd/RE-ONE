@@ -6,7 +6,7 @@ interface ExplorerAppProps {
   year: string | null
   onOpenYear: (year: string) => void
   onOpenRag: (year?: string) => void
-  onOpenMemory: (year: string) => void
+  onOpenMemory: (year: string, origin?: DOMRect) => void
 }
 
 export default function ExplorerApp({ year, onOpenYear, onOpenRag, onOpenMemory }: ExplorerAppProps) {
@@ -54,7 +54,7 @@ export default function ExplorerApp({ year, onOpenYear, onOpenRag, onOpenMemory 
               <div
                 className={shared.fileItem}
                 style={{ cursor: 'pointer' }}
-                onDoubleClick={() => onOpenMemory(year)}
+                onDoubleClick={(e) => onOpenMemory(year, e.currentTarget.getBoundingClientRect())}
               >
                 <div className={shared.fileGlyph}>📔</div>
                 <div className={shared.fileName}>Enter {year}</div>
