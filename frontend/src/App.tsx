@@ -13,13 +13,17 @@ export default function App() {
     setMemoryYear(year)
   }
 
-  if (memoryYear) {
-    return <MemoryPage year={memoryYear} origin={memoryOrigin} onBack={() => setMemoryYear(null)} />
+  if (!entered) {
+    return <LandingPage onEnter={() => setEntered(true)} />
   }
 
-  if (entered) {
-    return <Desktop onOpenMemory={openMemory} />
-  }
-
-  return <LandingPage onEnter={() => setEntered(true)} />
+  return (
+    <>
+      {/* Desktop stays mounted underneath so it's visible behind the
+          expanding circle during the zoom-in, instead of a blank gap
+          where Desktop used to be. */}
+      <Desktop onOpenMemory={openMemory} />
+      {memoryYear && <MemoryPage year={memoryYear} origin={memoryOrigin} onBack={() => setMemoryYear(null)} />}
+    </>
+  )
 }

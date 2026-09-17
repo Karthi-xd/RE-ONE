@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import styles from './MemoryPage.module.css'
 import SeasonalOverlay from './SeasonalOverlay'
+import MemoryChat from '../chat/MemoryChat'
 
 // Static imports so Vite bundles + hashes these correctly.
 import img2015 from '../assets/years/2015.jpg'
@@ -48,6 +49,8 @@ export default function MemoryPage({ year, origin, onBack }: MemoryPageProps) {
       <button type="button" className={styles.backBtn} onClick={onBack}>
         ← Back
       </button>
+      {/* Same chat for every year; `year` scopes it to that knowledge base. */}
+      <MemoryChat year={year} />
     </div>
   )
 }

@@ -1,0 +1,80 @@
+/* Modern glass message list. Sits over a photo, so everything is
+   translucent + blurred rather than opaque chrome. */
+.root {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 18px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.content::-webkit-scrollbar {
+  width: 6px;
+}
+.content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+.content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollButton {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(20, 20, 24, 0.72);
+  backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.92);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.scrollButton:hover {
+  background: rgba(20, 20, 24, 0.9);
+}
+
+.emptyState {
+  margin: auto;
+  padding: 28px 20px;
+  text-align: center;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.emptyIcon {
+  font-size: 26px;
+  margin-bottom: 10px;
+  opacity: 0.85;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.emptyDescription {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.6);
+}

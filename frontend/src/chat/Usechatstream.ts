@@ -111,7 +111,7 @@ export function useChatStream(year: string) {
               prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + data.text } : m))
             )
           } else if (event === 'error') {
-            throw new Error(data.detail || 'CGK had trouble answering that.')
+            throw new Error(data.detail || 'Could not answer that right now.')
           } else if (event === 'done') {
             break
           }

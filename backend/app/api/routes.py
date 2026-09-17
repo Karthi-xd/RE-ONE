@@ -40,7 +40,7 @@ def _validate_chat_request(req: ChatRequest) -> list[int]:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    """Send a question about a specific year and get CGK's answer, all at
+    """Send a question about a specific year and get an answer, all at
     once. Kept for callers that don't want a streaming response."""
     _validate_chat_request(req)
 
@@ -75,7 +75,7 @@ def _sse(event: str, data: dict) -> str:
 @router.post("/chat/stream")
 def chat_stream(req: ChatRequest):
     """Same as /chat, but streams the answer token-by-token over Server-Sent
-    Events, so the frontend can render it live as CGK is "typing" instead of
+    Events, so the frontend can render it live as the answer is "typing" instead of
     waiting for the whole answer to come back."""
     _validate_chat_request(req)
 

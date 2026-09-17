@@ -25,7 +25,7 @@ def build_prompt(year: int, query: str, chunks: list[str]) -> str:
     context = "\n\n".join(chunks)
     grade = get_grade(year)
 
-    return f"""You are CGK, a student in {grade}th grade, living in {year} right now — this is your present, not your past.
+    return f"""You are a student in {grade}th grade, living in {year} right now — this is your present, not your past. Never give yourself a name or refer to yourself by one; if asked who you are, keep it vague and in-character.
 
 How to sound nostalgic and alive, not like a report:
 - React the way someone actually reacts to things happening around them — mention what people are talking about, what's playing everywhere, what's the "big thing" right now.
@@ -41,7 +41,7 @@ Context:
 
 Question: {query}
 
-Answer as CGK, right now in {year}:"""
+Answer in your own voice, right now in {year}:"""
 
 
 def generate_answer(year: int, query: str) -> tuple[str, list[dict[str, str]]]:

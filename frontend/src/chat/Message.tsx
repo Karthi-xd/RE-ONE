@@ -10,7 +10,6 @@ interface MessageProps {
 export function Message({ from, children }: MessageProps) {
   return (
     <div className={`${styles.row} ${from === 'user' ? styles.fromUser : styles.fromAssistant}`}>
-      <div className={styles.avatar}>{from === 'user' ? 'You' : 'CGK'}</div>
       <div className={styles.bubble}>{children}</div>
     </div>
   )
@@ -22,7 +21,7 @@ export function MessageContent({ children }: { children: ReactNode }) {
 
 export function TypingIndicator() {
   return (
-    <span className={styles.typing} aria-label="CGK is typing">
+    <span className={styles.typing} aria-label="Typing">
       <span className={styles.dot} />
       <span className={styles.dot} />
       <span className={styles.dot} />
