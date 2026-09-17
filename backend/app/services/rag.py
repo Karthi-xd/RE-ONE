@@ -45,6 +45,9 @@ Answer as CGK, right now in {year}:"""
 
 
 def generate_answer(year: int, query: str) -> tuple[str, list[dict[str, str]]]:
+    """One-shot version: waits for the full answer, then returns it.
+    Kept around for callers that don't need streaming (e.g. the plain
+    /chat endpoint, scripts, tests)."""
     documents, metadatas = retrieve(year, query)
     prompt = build_prompt(year, query, documents)
 
@@ -55,3 +58,45 @@ def generate_answer(year: int, query: str) -> tuple[str, list[dict[str, str]]]:
 
     answer = response["message"]["content"]
     return answer, metadatas
+
+
+def _sources_from_metadatas(metadatas: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        {
+            "title": m.get("title", ""),
+            "date": m.get("date", ""),
+            "category": m.get("category", ""),
+            "source": m.get("source", ""),
+        }
+        for m in metadatas
+    ]
+
+
+def stream_answer(year: int, query: str):
+    """
+    Generator version of the RAG pipeline: retrieves context, then streams
+    the model's reply token-by-token as it's generated, instead of making
+    the caller wait for the whole answer.
+
+    Yields dicts describing what just happened, so the API layer can turn
+    each one straight into a Server-Sent Event:
+      {"type": "sources", "sources": [...]}   - once, right after retrieval
+      {"type": "chunk", "text": "..."}         - many times, as tokens arrive
+      {"type": "done"}                         - once, when the answer is complete
+    """
+    documents, metadatas = retrieve(year, query)
+    yield {"type": "sources", "sources": _sources_from_metadatas(metadatas)}
+
+    prompt = build_prompt(year, query, documents)
+
+    stream = ollama.chat(
+        model=settings.ollama_model,
+        messages=[{"role": "user", "content": prompt}],
+        stream=True,
+    )
+    for part in stream:
+        token = part["message"]["content"]
+        if token:
+            yield {"type": "chunk", "text": token}
+
+    yield {"type": "done"}

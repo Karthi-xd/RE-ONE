@@ -1,0 +1,70 @@
+.root {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 8px;
+  background: var(--win-face);
+  border-top: 1px solid var(--btn-shadow);
+}
+
+.textarea {
+  flex: 1 1 auto;
+  resize: none;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 6px 8px;
+  border: 1px solid var(--btn-shadow);
+  border-top-color: #404040;
+  border-left-color: #404040;
+  background: #fff;
+  min-height: 30px;
+  max-height: 90px;
+  line-height: 1.4;
+}
+.textarea:disabled {
+  background: #eee;
+  color: #888;
+}
+
+.submit {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 30px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  background: var(--btn-face);
+  border: 2px solid;
+  border-top-color: #fff;
+  border-left-color: #fff;
+  border-right-color: #616161;
+  border-bottom-color: #616161;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.submit:active {
+  border-top-color: #616161;
+  border-left-color: #616161;
+  border-right-color: #fff;
+  border-bottom-color: #fff;
+}
+.submit:disabled {
+  color: #888;
+  cursor: default;
+}
+
+.spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #99b8e0;
+  border-top-color: #0a246a;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
