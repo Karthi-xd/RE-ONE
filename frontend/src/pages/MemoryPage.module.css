@@ -15,21 +15,16 @@
   animation: pageExpand 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Wraps the photo + seasonal effects (rain/snow/leaves canvases) so the
-   blur is applied to the whole scene together, not just the photo. */
+/* Wraps the photo + seasonal effects (rain/snow/leaves canvases). */
 .scene {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  filter: blur(2px) saturate(1.03);
-  /* Scaled up slightly so the blur samples pull from outside the visible
-     frame - without this, blurred edges look washed out/lighter than the
-     center, which is the tell that gives away a cheap CSS blur. */
-  transform: scale(1.015);
-  will-change: filter, transform;
-  /* Settles from a soft, slightly-zoomed state into the resting blur,
-     timed to finish just as the page-expand settles. */
+  filter: saturate(1.03);
+  will-change: filter;
+  /* Settles from a slightly desaturated/dim state into full color, timed
+     to finish just as the page-expand settles. No blur - stays sharp. */
   animation: memoryFocusIn 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -41,8 +36,7 @@
   display: block;
 }
 
-/* Very light vignette so it still reads as a soft "frosted" scene rather
-   than a flat sharp one. Sits above the blurred scene but below the back
+/* Very light vignette for depth. Sits above the scene but below the back
    button. */
 .root::after {
   content: '';
@@ -93,12 +87,10 @@
 
 @keyframes memoryFocusIn {
   from {
-    filter: blur(10px) saturate(0.55) brightness(0.9);
-    transform: scale(1.05);
+    filter: saturate(0.55) brightness(0.9);
   }
   to {
-    filter: blur(2px) saturate(1.03) brightness(1);
-    transform: scale(1.015);
+    filter: saturate(1.03) brightness(1);
   }
 }
 
