@@ -10,16 +10,14 @@ interface MemoryChatProps {
 }
 
 /**
- * Full-screen AI chat takeover for a single year, styled like the major
- * chat products (ChatGPT / Claude / Gemini) rather than a chrome-heavy
- * "app": no avatars, no window frame, a centered composer that starts in
- * the middle of the screen and migrates to the bottom once the
- * conversation begins. Launches from a small pill over the photo and
- * takes over the full viewport - this is the point of the project, not a
- * bolted-on widget.
+ * Full-screen AI chat, styled like the major chat products (ChatGPT /
+ * Claude / Gemini): no avatars, no window frame, no launcher step - it's
+ * simply there the moment this year's memory opens. Composer starts
+ * centered low over the photo and migrates to a pinned bottom bar once
+ * the conversation begins.
  */
 export default function MemoryChat({ year }: MemoryChatProps) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -61,12 +59,9 @@ export default function MemoryChat({ year }: MemoryChatProps) {
   }
 
   if (!open) {
-    return (
-      <button type="button" className={styles.launcher} onClick={() => setOpen(true)}>
-        <span className={styles.sparkle}>✦</span>
-        Ask about {year}
-      </button>
-    )
+    // Dismissed for this visit - the photo shows clean underneath. Leaving
+    // and reopening this year's memory mounts a fresh chat.
+    return null
   }
 
   return (
