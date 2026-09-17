@@ -23,46 +23,6 @@
   animation: shellIn 200ms ease both;
 }
 
-.header {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 18px;
-}
-
-.yearBadge {
-  padding: 4px 11px;
-  border-radius: 8px;
-  background: rgba(20, 20, 24, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.close {
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(20, 20, 24, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 12px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: background 160ms ease;
-}
-.close:hover {
-  background: rgba(20, 20, 24, 0.55);
-}
-
 /* Empty state - just the composer, low over the photo. */
 .hero {
   flex: 1 1 auto;

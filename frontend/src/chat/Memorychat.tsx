@@ -11,13 +11,13 @@ interface MemoryChatProps {
 
 /**
  * Full-screen AI chat, styled like the major chat products (ChatGPT /
- * Claude / Gemini): no avatars, no window frame, no launcher step - it's
- * simply there the moment this year's memory opens. Composer starts
+ * Claude / Gemini): no avatars, no window frame, no launcher step, no
+ * close affordance of its own - it's simply there the moment this year's
+ * memory opens, for as long as you're on that photo. Composer starts
  * centered low over the photo and migrates to a pinned bottom bar once
  * the conversation begins.
  */
 export default function MemoryChat({ year }: MemoryChatProps) {
-  const [open, setOpen] = useState(true)
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -32,25 +32,6 @@ export default function MemoryChat({ year }: MemoryChatProps) {
     el.scrollTop = el.scrollHeight
   }, [messages])
 
-  useEffect(() => {
-    if (!open) return
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open])
-
-  // Lock page scroll while the takeover is open.
-  useEffect(() => {
-    if (!open) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [open])
-
   function submit() {
     const value = input.trim()
     if (!value || isBusy) return
@@ -58,22 +39,9 @@ export default function MemoryChat({ year }: MemoryChatProps) {
     setInput('')
   }
 
-  if (!open) {
-    // Dismissed for this visit - the photo shows clean underneath. Leaving
-    // and reopening this year's memory mounts a fresh chat.
-    return null
-  }
-
   return (
     <div className={styles.overlay} role="dialog" aria-label={`Conversation about ${year}`}>
       <div className={styles.shell}>
-        <header className={styles.header}>
-          <span className={styles.yearBadge}>{year}</span>
-          <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Close">
-            ✕
-          </button>
-        </header>
-
         {!hasMessages ? (
           <div className={styles.hero}>
             <div className={styles.heroInput}>
@@ -108,7 +76,7 @@ export default function MemoryChat({ year }: MemoryChatProps) {
                 <PromptInput
                   value={input}
                   onChange={setInput}
-                  onSubmit={() => submit()}
+                  onSubmit={submit}
                   disabled={isBusy}
                   placeholder={`Ask about ${year}…`}
                   status={status}

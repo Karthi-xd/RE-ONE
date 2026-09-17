@@ -10,11 +10,33 @@ class Settings(BaseSettings):
     n_results: int = 3
     db_path: Path = Path(__file__).resolve().parents[3] / "data" / "chroma_db"
 
+    # Chroma's default embedding function (MiniLM-L6-v2) + default HNSW
+    # space returns a *distance*, not a similarity score, and it ALWAYS
+    # returns your n_results nearest neighbours even if none of them are
+    # actually related to the query - there's no built-in "nothing matched"
+    # signal. This is the threshold below which we trust a retrieved chunk
+    # is genuinely about the question; above it, we treat the archive as
+    # having nothing relevant and skip using the chunk at all.
+    #
+    # Typical observed ranges with this setup: a chunk that's really about
+    # what was asked scores well under 1.0; an unrelated chunk that just
+    # shares a word or two typically lands 1.3+. Log the real distances
+    # you see in your own data (see rag.py) and adjust this if genuine
+    # answers get rejected or junk still slips through.
+    relevance_threshold: float = 1.15
+
     class Config:
         env_file = ".env"
 
 
 settings = Settings()
+
+# Opened once, here, and reused everywhere (routes.py's /years endpoint
+# and rag.py's retrieval both import this). Every place that used to call
+# `chromadb.PersistentClient(...)` fresh on each request was paying the
+# cost of re-opening the on-disk index from scratch every single time -
+# noticeable on every message, not just the first one.
+chroma_client = chromadb.PersistentClient(path=str(settings.db_path))
 
 
 def get_available_years() -> list[int]:
@@ -30,10 +52,9 @@ def get_available_years() -> list[int]:
     if not settings.db_path.exists():
         return []
 
-    client = chromadb.PersistentClient(path=str(settings.db_path))
     years = []
 
-    for collection in client.list_collections():
+    for collection in chroma_client.list_collections():
         name = collection.name
         if name.startswith("events_"):
             year_part = name.removeprefix("events_")

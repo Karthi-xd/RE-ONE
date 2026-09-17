@@ -51,24 +51,31 @@
   position: absolute;
   top: 20px;
   left: 20px;
-  z-index: 10;
-  padding: 8px 18px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-family: 'Segoe UI', 'Lato', sans-serif;
+  z-index: 2100;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(20, 20, 24, 0.35);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  color: rgba(255, 255, 255, 0.92);
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 13px;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  letter-spacing: -0.005em;
   cursor: pointer;
   /* Waits for the expand to mostly settle before easing in, so the eye
      lands on the photo first. */
   opacity: 0;
   animation: memoryBtnFadeIn 400ms ease-out 380ms both;
+  transition: background 160ms ease;
 }
 
 .backBtn:hover {
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(20, 20, 24, 0.5);
 }
 
 @keyframes pageExpand {

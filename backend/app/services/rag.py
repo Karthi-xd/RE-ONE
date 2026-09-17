@@ -1,12 +1,30 @@
+import logging
 import re
-import chromadb
 import ollama
-from ..core.config import settings
+from ..core.config import settings, chroma_client
+
+logger = logging.getLogger(__name__)
+
+# How long Ollama should keep the model loaded in memory after a request
+# with no new requests coming in. Ollama's own default is 5 minutes, but
+# if a gap in the conversation (or a backend restart) lets it unload, the
+# *next* message pays the full model-load cost again - for a 7B model
+# that alone can be 10-30+ seconds on CPU. Keeping it warm for longer
+# avoids that as long as you're actively using the app.
+_KEEP_ALIVE = "30m"
+
+# Hard caps on how many tokens the model is allowed to generate. The
+# personas are written to reply in 1-2 short sentences, but nothing
+# stops the model from ignoring that and rambling - every extra token
+# is extra wall-clock time, especially on CPU. Chat/out-of-range/no-match
+# replies are one-liners so they get a tight cap; grounded answers get a
+# little more room since they're explaining something.
+_SHORT_REPLY_OPTIONS = {"num_predict": 80}
+_GROUNDED_REPLY_OPTIONS = {"num_predict": 220}
 
 
 def _get_collection(year: int):
-    client = chromadb.PersistentClient(path=str(settings.db_path))
-    return client.get_collection(name=f"events_{year}")
+    return chroma_client.get_collection(name=f"events_{year}")
 
 
 def get_grade(year: int) -> int:
@@ -14,12 +32,30 @@ def get_grade(year: int) -> int:
 
 
 def retrieve(year: int, query: str, n_results: int | None = None):
+    """Returns (documents, metadatas, distances). Distances let the caller
+    decide whether what came back is actually relevant - Chroma will
+    happily hand back its n nearest neighbours even when none of them
+    have anything to do with the query, so the raw documents alone are
+    not enough to know whether retrieval "found" anything."""
     n = n_results or settings.n_results
     collection = _get_collection(year)
-    results = collection.query(query_texts=[query], n_results=n)
+    results = collection.query(
+        query_texts=[query], n_results=n, include=["documents", "metadatas", "distances"]
+    )
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
-    return documents, metadatas
+    distances = results["distances"][0]
+    return documents, metadatas, distances
+
+
+def _is_relevant(distances: list[float]) -> bool:
+    """True if the best match is close enough to trust. Empty results
+    (e.g. an empty collection) are never relevant."""
+    if not distances:
+        return False
+    best = min(distances)
+    logger.info("retrieval best distance=%.4f (threshold=%.4f)", best, settings.relevance_threshold)
+    return best <= settings.relevance_threshold
 
 
 # --- Query classification -------------------------------------------------
@@ -39,6 +75,20 @@ _GREETING_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Broader net for conversational messages that aren't asking anything
+# about the archive's content - "what are you doing", "who are you",
+# "are you a robot", etc. A whitelist regex can never enumerate every way
+# someone phrases small talk, so this catches common shapes of it, and
+# the relevance-distance gate in retrieve()/_is_relevant() is the real
+# backstop for anything that slips past both regexes.
+_CHITCHAT_RE = re.compile(
+    r"^(what are you (doing|up to)|what'?re you (doing|up to)|who are you|"
+    r"are you (a )?(real|human|ai|robot|bot)|do you have a name|what'?s your name|"
+    r"can you hear me|are you (there|ok|okay)|what do you do|tell me about yourself|"
+    r"how old are you|where are you|are you busy)[\s!.,?]*$",
+    re.IGNORECASE,
+)
+
 _YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
 
 
@@ -49,10 +99,17 @@ def classify_query(year: int, query: str) -> tuple[str, int | None]:
       "chat"        - small talk / greeting, no archive lookup needed
       "out_of_range" - the question names a year other than the one open
       "grounded"    - a real question about this year, use the archive
+
+    Note: this is a cheap pre-filter, not the only defense against
+    off-topic chatter reaching the archive. Anything that reaches
+    "grounded" still has to clear the relevance-distance check in
+    generate_answer/stream_answer before a retrieved chunk is trusted -
+    that check is what actually stops random chunks being used just
+    because they were the nearest neighbour available.
     """
     q = query.strip()
 
-    if not q or _GREETING_RE.match(q):
+    if not q or _GREETING_RE.match(q) or _CHITCHAT_RE.match(q):
         return "chat", None
 
     mentioned = {int(m) for m in _YEAR_RE.findall(q)}
@@ -119,6 +176,25 @@ They said: "{query}"
 Your reply:"""
 
 
+def build_no_match_prompt(year: int, query: str) -> str:
+    """The question was a real question, but nothing in this year's
+    archive was actually close enough to answer it from - react like a
+    real person who's just never heard of the thing, instead of forcing
+    an answer out of whatever chunk happened to be nearest."""
+    return f"""{_persona_header(year)}
+
+The person just asked you something, but it's genuinely not something
+you know anything about - it never came up. Don't guess, don't invent
+details, and don't mention "the archive," "data," or "context." Just
+react the way a real person would when they draw a blank: "huh, never
+heard of that" / "not sure what you mean" / "that's not ringing a bell."
+Keep it to one short sentence.
+
+They said: "{query}"
+
+Your reply:"""
+
+
 def build_prompt(year: int, query: str, chunks: list[str]) -> str:
     """Grounded answer - a real question about this year, answered only
     from what's actually in the archive."""
@@ -152,16 +228,28 @@ def generate_answer(year: int, query: str) -> tuple[str, list[dict[str, str]]]:
     if mode == "chat":
         prompt = build_chat_prompt(year, query)
         metadatas: list[dict[str, str]] = []
+        options = _SHORT_REPLY_OPTIONS
     elif mode == "out_of_range":
         prompt = build_out_of_range_prompt(year, query, target_year)  # type: ignore[arg-type]
         metadatas = []
+        options = _SHORT_REPLY_OPTIONS
     else:
-        documents, metadatas = retrieve(year, query)
-        prompt = build_prompt(year, query, documents)
+        documents, metadatas, distances = retrieve(year, query)
+        if _is_relevant(distances):
+            prompt = build_prompt(year, query, documents)
+            options = _GROUNDED_REPLY_OPTIONS
+        else:
+            # Nothing actually relevant came back - don't let an
+            # unrelated "nearest neighbour" chunk pose as fact.
+            prompt = build_no_match_prompt(year, query)
+            metadatas = []
+            options = _SHORT_REPLY_OPTIONS
 
     response = ollama.chat(
         model=settings.ollama_model,
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
+        keep_alive=_KEEP_ALIVE,
+        options=options,
     )
 
     answer = response["message"]["content"]
@@ -198,17 +286,27 @@ def stream_answer(year: int, query: str):
     if mode == "chat":
         prompt = build_chat_prompt(year, query)
         yield {"type": "sources", "sources": []}
+        options = _SHORT_REPLY_OPTIONS
     elif mode == "out_of_range":
         prompt = build_out_of_range_prompt(year, query, target_year)  # type: ignore[arg-type]
         yield {"type": "sources", "sources": []}
+        options = _SHORT_REPLY_OPTIONS
     else:
-        documents, metadatas = retrieve(year, query)
-        yield {"type": "sources", "sources": _sources_from_metadatas(metadatas)}
-        prompt = build_prompt(year, query, documents)
+        documents, metadatas, distances = retrieve(year, query)
+        if _is_relevant(distances):
+            yield {"type": "sources", "sources": _sources_from_metadatas(metadatas)}
+            prompt = build_prompt(year, query, documents)
+            options = _GROUNDED_REPLY_OPTIONS
+        else:
+            yield {"type": "sources", "sources": []}
+            prompt = build_no_match_prompt(year, query)
+            options = _SHORT_REPLY_OPTIONS
 
     stream = ollama.chat(
         model=settings.ollama_model,
         messages=[{"role": "user", "content": prompt}],
+        keep_alive=_KEEP_ALIVE,
+        options=options,
         stream=True,
     )
     for part in stream:
