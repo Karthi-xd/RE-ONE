@@ -1,9 +1,12 @@
 .viewport {
   position: relative;
+  z-index: 5000;
   width: 100%;
   height: 100vh;
   overflow: hidden;
   background: #000;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
 }
 
 .imgWrap {
@@ -228,13 +231,4 @@
 @keyframes enterFloat {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-4px); }
-}
-/* Single smooth fade-to-black bridge between landing and main page. */
-.fadeToBlack {
-  position: absolute;
-  inset: 0;
-  background: #0a0806;
-  pointer-events: none;
-  opacity: 0;
-  z-index: 5;
 }

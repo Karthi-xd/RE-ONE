@@ -8,15 +8,22 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onEnter }: LandingPageProps) {
+  const viewportRef = useRef<HTMLDivElement>(null)
   const imgWrapRef  = useRef<HTMLDivElement>(null)
   const canvasRef   = useRef<HTMLCanvasElement>(null)
   const lampRef     = useRef<HTMLDivElement>(null)
   const vignetteRef = useRef<HTMLDivElement>(null)
   const taglineRef  = useRef<HTMLParagraphElement>(null)
   const buttonRef   = useRef<HTMLButtonElement>(null)
-  const fadeRef     = useRef<HTMLDivElement>(null)
 
   const [isTransitioning, setIsTransitioning] = useState(false)
+  // A ref mirror of isTransitioning that the animation loop reads directly,
+  // so starting the exit transition can stop the loop immediately instead
+  // of waiting for React to re-run the effect (which used to happen too -
+  // see below - and meant the dust/steam canvas kept redrawing every frame
+  // right underneath the exit animation, competing for the same frame
+  // budget and making it stutter instead of gliding).
+  const isTransitioningRef = useRef(false)
 
   useEffect(() => {
     const imgWrap  = imgWrapRef.current!
@@ -122,6 +129,12 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
     let t = 0
 
     function tick() {
+      // The exit animation is about to take over the whole screen and
+      // needs every bit of frame budget it can get - stop doing any of
+      // this work once we're on the way out instead of quietly competing
+      // with GSAP for the same frames.
+      if (isTransitioningRef.current) return
+
       t += 1
 
       curMX += (targetMX - curMX) * 0.04
@@ -138,7 +151,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       const parX = curMX * 16 + jitterX
       const parY = curMY * 11 + jitterY
 
-      if (!isTransitioning) {
+      if (!isTransitioningRef.current) {
         imgWrap.style.transform =
           `translate3d(calc(${driftX}% + ${parX}px), calc(${driftY}% + ${parY}px), 0) scale(${scale})`
       }
@@ -146,7 +159,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       canvas.style.transform =
         `translate3d(${curMX * 26}px, ${curMY * 18}px, 0)`
 
-      if (!isTransitioning) {
+      if (!isTransitioningRef.current) {
         vignette.style.opacity = String(0.45 + 0.18 * breathe)
       }
 
@@ -226,50 +239,44 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseleave', onMouseLeave)
     }
-  }, [isTransitioning])
+  }, [])
 
   function handleEnter() {
     if (isTransitioning) return
     setIsTransitioning(true)
+    // Stop the animation loop this same tick, before GSAP starts - so the
+    // exit motion below isn't sharing frame budget with dust particles and
+    // parallax that are about to be invisible anyway.
+    isTransitioningRef.current = true
 
     const tl = gsap.timeline({
       onComplete: onEnter,
     })
 
-    // UI eases away first, quietly
+    // UI eases away first, quickly - no lingering.
     tl.to([buttonRef.current, taglineRef.current], {
       opacity: 0,
-      y: -10,
-      duration: 0.6,
-      ease: 'power2.inOut',
+      y: -8,
+      duration: 0.3,
+      ease: 'power2.out',
     }, 0)
 
-    // Scene gently pushes in and settles back, softly darkening
-    tl.to(imgWrapRef.current, {
-      scale: 1.08,
-      duration: 1.6,
-      ease: 'power1.inOut',
-    }, 0.1)
-
-    tl.to(vignetteRef.current, {
-      opacity: 0.9,
-      duration: 1.4,
-      ease: 'power1.inOut',
-    }, 0.2)
-
-    // A single smooth fade to black bridges the two pages
-    tl.to(fadeRef.current, {
-      opacity: 1,
-      duration: 0.9,
+    // A single, cheap scale + fade - transform and opacity are the two
+    // properties the browser can animate on the compositor thread without
+    // repainting anything, which is what actually makes this feel smooth.
+    // (A blur() tween here looked "softer" on paper but forces the browser
+    // to re-blur the whole photo + particle canvas every frame, which is
+    // exactly what was making it stutter instead of glide.)
+    tl.to(viewportRef.current, {
+      scale: 1.05,
+      opacity: 0,
+      duration: 0.6,
       ease: 'power2.inOut',
-    }, 0.9)
-
-    // Brief hold on black before handing off
-    tl.to({}, { duration: 0.2 }, 1.7)
+    }, 0.1)
   }
 
   return (
-    <div className={styles.viewport}>
+    <div ref={viewportRef} className={styles.viewport}>
       <div ref={imgWrapRef} className={styles.imgWrap}>
         <img
           src={deskScene}
@@ -288,8 +295,6 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       <div ref={lampRef} className={styles.lampGlow} />
       <div ref={vignetteRef} className={styles.vignette} />
       <div className={styles.cornerMask} />
-
-      <div ref={fadeRef} className={styles.fadeToBlack} />
 
       <button
         ref={buttonRef}
